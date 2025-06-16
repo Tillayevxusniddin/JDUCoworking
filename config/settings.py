@@ -45,7 +45,7 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
-    'drf_yasg',
+    'drf_spectacular',
 ]
 
 LOCAL_APPS = [
@@ -190,38 +190,111 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Digital University Coworking System API',
+    'DESCRIPTION': """
+    🎓 **Digital University Coworking System API Documentation**
+    
+    Bu API universitet talabalarining kovorking faoliyatini boshqarish uchun mo'ljallangan.
+    
+    ## Asosiy xususiyatlar:
+    - 👤 Foydalanuvchilar va rollar boshqaruvi (STUDENT, STAFF, TEAMLEADER, RECRUITER, ADMIN)
+    - 🏢 Kovorking maydonlari va a'zolik tizimi
+    - 📋 Vazifalar va loyihalar boshqaruvi
+    - 📊 Hisobotlar va maosh hisob-kitoblari
+    - 🤝 Uchrashuvlar va video konferensiyalar
+    - 💼 Ish e'lonlari va ariza berish tizimi
+    - 🔔 Bildirishnomalar va xabarlar
+    
+    ## Autentifikatsiya:
+    JWT token orqali autentifikatsiya qilinadi. 
+    1. `/api/v1/auth/login/` orqali login qiling
+    2. Olgan `access_token` ni `Authorization: Bearer <token>` formatida header ga qo'shing
+    3. Token muddati tugaganda `/api/v1/auth/token/refresh/` orqali yangilang
+    
+    ## User Types:
+    - **STUDENT**: Talabalar - vazifalar, hisobotlar, ish izlash
+    - **STAFF**: Xodimlar - talabalar bilan ishlash
+    - **TEAMLEADER**: Jamoa rahbarlari - loyihalar boshqaruvi
+    - **RECRUITER**: Ishga oluvchilar - ish e'lonlari
+    - **ADMIN**: Administratorlar - to'liq huquqlar
+    """,
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+        'supportedSubmitMethods': ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'],
+    },
+    'CONTACT': {
+        'name': 'Development Team',
+        'email': 'tillayevx1@gmail.com',
+        'url': 'https://github.com/Tillayevxusniddin'
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+    },
+    'SERVERS': [
+        {
+            'url': 'http://localhost:8000',
+            'description': 'Local server'
+        },
+    ],
+    # JWT authentication uchun security scheme
+    'SECURITY': [
+        {
+            'bearerAuth': []
         }
-    }
+    ],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'bearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
 }
+
+
+# SWAGGER_SETTINGS = {
+#     'SECURITY_DEFINITIONS': {
+#         'Bearer': {
+#             'type': 'apiKey',
+#             'name': 'Authorization',
+#             'in': 'header'
+#         }
+#     }
+# }
 
 #JWT Settings
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': True,
-
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': config('SECRET_KEY'),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-REDOC_SETTINGS = {
-    'LAZY_RENDERING': True,
-}
+# REDOC_SETTINGS = {
+#     'LAZY_RENDERING': True,
+# }
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [

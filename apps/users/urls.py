@@ -1,14 +1,25 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import (
+    AuthViewSet, 
+    UserManagementViewSet, 
+    StudentProfileViewSet, 
+    RecruiterProfileViewSet, 
+    StaffProfileViewSet
+)
 
-router = DefaultRouter()
-router.register(r'auth', views.AuthViewSet, basename='auth')
-router.register(r'users', views.UserManagementViewSet, basename='users')
-router.register(r'profiles/students', views.StudentProfileViewSet, basename='student-profiles')
-router.register(r'profiles/recruiters', views.RecruiterProfileViewSet, basename='recruiter-profiles')
-router.register(r'profiles/staff', views.StaffProfileViewSet, basename='staff-profiles')
+# `trailing_slash=False` URL'lar oxirida slesh bo'lmasligini ta'minlaydi (masalan, /users/auth/login)
+router = DefaultRouter(trailing_slash=False)
+
+# Ro'yxatdan o'tkazish
+router.register(r'auth', AuthViewSet, basename='auth')
+router.register(r'management', UserManagementViewSet, basename='user-management')
+router.register(r'profiles/students', StudentProfileViewSet, basename='student-profiles')
+router.register(r'profiles/recruiters', RecruiterProfileViewSet, basename='recruiter-profiles')
+router.register(r'profiles/staff', StaffProfileViewSet, basename='staff-profiles')
 
 urlpatterns = [
-    path('api/v1/', include(router.urls)),
+    # Router tomonidan generatsiya qilingan barcha URL'larni qo'shish
+    # URL'lar /users/ prefiksi bilan boshlanadi (asosiy urls.py faylidan)
+    path('', include(router.urls)),
 ]

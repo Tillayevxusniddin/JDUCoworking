@@ -1,0 +1,2447 @@
+openapi: 3.0.3
+info:
+  title: Digital University Coworking System API
+  version: 1.0.0
+  description: "\n    \U0001F393 **Digital University Coworking System API Documentation**\n\
+    \    \n    Bu API universitet talabalarining kovorking faoliyatini boshqarish\
+    \ uchun mo'ljallangan.\n    \n    ## Asosiy xususiyatlar:\n    - \U0001F464 Foydalanuvchilar\
+    \ va rollar boshqaruvi (STUDENT, STAFF, TEAMLEADER, RECRUITER, ADMIN)\n    - \U0001F3E2\
+    \ Kovorking maydonlari va a'zolik tizimi\n    - \U0001F4CB Vazifalar va loyihalar\
+    \ boshqaruvi\n    - \U0001F4CA Hisobotlar va maosh hisob-kitoblari\n    - \U0001F91D\
+    \ Uchrashuvlar va video konferensiyalar\n    - \U0001F4BC Ish e'lonlari va ariza\
+    \ berish tizimi\n    - \U0001F514 Bildirishnomalar va xabarlar\n    \n    ## Autentifikatsiya:\n\
+    \    JWT token orqali autentifikatsiya qilinadi. \n    1. `/api/v1/auth/login/`\
+    \ orqali login qiling\n    2. Olgan `access_token` ni `Authorization: Bearer <token>`\
+    \ formatida header ga qo'shing\n    3. Token muddati tugaganda `/api/v1/auth/token/refresh/`\
+    \ orqali yangilang\n    \n    ## User Types:\n    - **STUDENT**: Talabalar - vazifalar,\
+    \ hisobotlar, ish izlash\n    - **STAFF**: Xodimlar - talabalar bilan ishlash\n\
+    \    - **TEAMLEADER**: Jamoa rahbarlari - loyihalar boshqaruvi\n    - **RECRUITER**:\
+    \ Ishga oluvchilar - ish e'lonlari\n    - **ADMIN**: Administratorlar - to'liq\
+    \ huquqlar\n    "
+  contact:
+    name: Development Team
+    email: tillayevx1@gmail.com
+    url: https://github.com/Tillayevxusniddin
+  license:
+    name: MIT License
+paths:
+  /api/v1/users/auth/change_password/:
+    post:
+      operationId: api_v1_users_auth_change_password_create
+      description: Change user password
+      summary: Change password
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/users/auth/login/:
+    post:
+      operationId: api_v1_users_auth_login_create
+      description: Authenticate user and get JWT tokens
+      summary: User login
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              ExampleRequest:
+                value:
+                  email: user@example.com
+                  password: password123
+                summary: Example request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                ExampleResponse:
+                  value:
+                    user:
+                      id: 1
+                      email: user@example.com
+                    access: eyJhbGciOi...
+                    refresh: eyJhbGciOi...
+                  summary: Example response
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/users/auth/logout/:
+    post:
+      operationId: api_v1_users_auth_logout_create
+      description: Invalidate refresh token
+      summary: User logout
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/users/profiles/recruiters/:
+    get:
+      operationId: api_v1_users_profiles_recruiters_list
+      description: Get paginated list of recruiters
+      summary: List recruiters
+      parameters:
+      - in: query
+        name: company_name
+        schema:
+          type: string
+        description: Filter by company name
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRecruiterProfileList'
+          description: ''
+    post:
+      operationId: api_v1_users_profiles_recruiters_create
+      description: Recruiter profile management
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+  /api/v1/users/profiles/recruiters/{id}/:
+    get:
+      operationId: api_v1_users_profiles_recruiters_retrieve
+      description: Get recruiter profile details
+      summary: Retrieve recruiter
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recruiter.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_recruiters_update
+      description: Full update recruiter profile
+      summary: Update recruiter
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recruiter.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruiterUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecruiterUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruiterUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_recruiters_partial_update
+      description: Partial update recruiter profile
+      summary: Partial update recruiter
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recruiter.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+    delete:
+      operationId: api_v1_users_profiles_recruiters_destroy
+      description: Recruiter profile management
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recruiter.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/profiles/recruiters/me/:
+    get:
+      operationId: api_v1_users_profiles_recruiters_me_retrieve
+      description: Get profile of currently authenticated recruiter
+      summary: Get current recruiter profile
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_recruiters_me_update
+      description: Get profile of currently authenticated recruiter
+      summary: Get current recruiter profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_recruiters_me_partial_update
+      description: Get profile of currently authenticated recruiter
+      summary: Get current recruiter profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRecruiterProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterProfile'
+          description: ''
+  /api/v1/users/profiles/staff/:
+    get:
+      operationId: api_v1_users_profiles_staff_list
+      description: Get paginated list of staff members
+      summary: List staff
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStaffProfileList'
+          description: ''
+    post:
+      operationId: api_v1_users_profiles_staff_create
+      description: Staff profile management
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+  /api/v1/users/profiles/staff/{id}/:
+    get:
+      operationId: api_v1_users_profiles_staff_retrieve
+      description: Get staff profile details
+      summary: Retrieve staff
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this staff.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_staff_update
+      description: Full update staff profile
+      summary: Update staff
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this staff.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_staff_partial_update
+      description: Partial update staff profile
+      summary: Partial update staff
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this staff.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+    delete:
+      operationId: api_v1_users_profiles_staff_destroy
+      description: Staff profile management
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this staff.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/profiles/staff/me/:
+    get:
+      operationId: api_v1_users_profiles_staff_me_retrieve
+      description: Get profile of currently authenticated staff member
+      summary: Get current staff profile
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_staff_me_update
+      description: Get profile of currently authenticated staff member
+      summary: Get current staff profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_staff_me_partial_update
+      description: Get profile of currently authenticated staff member
+      summary: Get current staff profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+          description: ''
+  /api/v1/users/profiles/students/:
+    get:
+      operationId: api_v1_users_profiles_students_list
+      description: Get paginated list of students
+      summary: List students
+      parameters:
+      - in: query
+        name: level_status
+        schema:
+          type: string
+        description: Filter by level status (SIMPLE, TEAMLEAD)
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: semester
+        schema:
+          type: integer
+          nullable: true
+          enum:
+          - 1
+          - 2
+        description: |-
+          * `1` - 1st Semester
+          * `2` - 2nd Semester
+      - in: query
+        name: year_of_study
+        schema:
+          type: integer
+        description: Filter by year of study (1-5)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStudentProfileList'
+          description: ''
+    post:
+      operationId: api_v1_users_profiles_students_create
+      description: Student profile management
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+  /api/v1/users/profiles/students/{id}/:
+    get:
+      operationId: api_v1_users_profiles_students_retrieve
+      description: Get student profile details
+      summary: Retrieve student
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_students_update
+      description: Full update student profile
+      summary: Update student
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_students_partial_update
+      description: Partial update student profile
+      summary: Partial update student
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+    delete:
+      operationId: api_v1_users_profiles_students_destroy
+      description: Student profile management
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/profiles/students/me/:
+    get:
+      operationId: api_v1_users_profiles_students_me_retrieve
+      description: Get profile of currently authenticated student
+      summary: Get current student profile
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+    put:
+      operationId: api_v1_users_profiles_students_me_update
+      description: Get profile of currently authenticated student
+      summary: Get current student profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+    patch:
+      operationId: api_v1_users_profiles_students_me_partial_update
+      description: Get profile of currently authenticated student
+      summary: Get current student profile
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+          description: ''
+  /api/v1/users/users/:
+    get:
+      operationId: api_v1_users_users_list
+      description: Get paginated list of all users (Admin only)
+      summary: List all users
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by first_name, last_name or email
+      - in: query
+        name: user_type
+        schema:
+          type: string
+        description: Filter by user type (STUDENT, STAFF, RECRUITER, ADMIN)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: api_v1_users_users_create
+      description: Create new user (Admin only)
+      summary: Create user
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/users/{id}/:
+    get:
+      operationId: api_v1_users_users_retrieve
+      description: Get user details by ID (Admin only)
+      summary: Retrieve user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_v1_users_users_update
+      description: Full update user details (Admin only)
+      summary: Update user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: api_v1_users_users_partial_update
+      description: Partial update user details (Admin only)
+      summary: Partial update user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: api_v1_users_users_destroy
+      description: Delete user (Admin only)
+      summary: Delete user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/users/me/:
+    get:
+      operationId: api_v1_users_users_me_retrieve
+      description: Get details of currently authenticated user
+      summary: Get current user
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/workspaces/workspaces/:
+    get:
+      operationId: api_v1_workspaces_workspaces_list
+      description: Get list of workspaces accessible to current user
+      summary: List workspaces
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: workspace_type
+        schema:
+          type: string
+        description: Filter by workspace type (GENERAL, PROJECT, STUDY, MEETING)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceList'
+          description: ''
+    post:
+      operationId: api_v1_workspaces_workspaces_create
+      description: Create new workspace (Admin only)
+      summary: Create workspace
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+        '403':
+          description: Forbidden if not admin
+  /api/v1/workspaces/workspaces/{id}/:
+    get:
+      operationId: api_v1_workspaces_workspaces_retrieve
+      description: Get workspace details by ID
+      summary: Retrieve workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+    put:
+      operationId: api_v1_workspaces_workspaces_update
+      description: Full update workspace (Admin only)
+      summary: Update workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+        '403':
+          description: Forbidden if not admin
+    patch:
+      operationId: api_v1_workspaces_workspaces_partial_update
+      description: Partial update workspace (Admin only)
+      summary: Partial update workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+        '403':
+          description: Forbidden if not admin
+    delete:
+      operationId: api_v1_workspaces_workspaces_destroy
+      description: Delete workspace (Admin only)
+      summary: Delete workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No content
+        '403':
+          description: Forbidden if not admin
+  /api/v1/workspaces/workspaces/{id}/add-member/:
+    post:
+      operationId: api_v1_workspaces_workspaces_add_member_create
+      description: Add new member to workspace (Admin only)
+      summary: Add member to workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreateRequest'
+            examples:
+              ExampleRequest:
+                value:
+                  user_id: 2
+                  role: MEMBER
+                  is_active: true
+                summary: Example request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+          description: ''
+        '400':
+          description: Bad request if validation fails
+        '403':
+          description: Forbidden if not admin
+        '404':
+          description: Workspace not found
+  /api/v1/workspaces/workspaces/{id}/members/:
+    get:
+      operationId: api_v1_workspaces_workspaces_members_list
+      description: Get list of all members in a workspace
+      summary: List workspace members
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: pk
+        schema:
+          type: integer
+        description: Workspace ID
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceMemberList'
+              examples:
+                ExampleResponse:
+                  value:
+                    count: 123
+                    next: http://api.example.org/accounts/?page=4
+                    previous: http://api.example.org/accounts/?page=2
+                    results:
+                    - - id: 1
+                        user:
+                          id: 1
+                          email: user@example.com
+                        role: ADMIN
+                        is_active: true
+                  summary: Example response
+          description: ''
+        '403':
+          description: Forbidden if not member or admin
+        '404':
+          description: Workspace not found
+  /api/v1/workspaces/workspaces/{id}/remove-member/{member_id}/:
+    delete:
+      operationId: api_v1_workspaces_workspaces_remove_member_destroy
+      description: Remove member from workspace (Admin only)
+      summary: Remove member from workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Ish Maydoni.
+        required: true
+      - in: path
+        name: member_id
+        schema:
+          type: integer
+        description: Member ID to remove
+        required: true
+      - in: path
+        name: pk
+        schema:
+          type: integer
+        description: Workspace ID
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No content
+        '403':
+          description: Forbidden if not admin
+        '404':
+          description: Workspace or member not found
+components:
+  schemas:
+    ChangePasswordRequest:
+      type: object
+      description: Serializer for changing password
+      properties:
+        old_password:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 8
+        confirm_password:
+          type: string
+          minLength: 1
+      required:
+      - confirm_password
+      - new_password
+      - old_password
+    LevelStatusEnum:
+      enum:
+      - SIMPLE
+      - TEAMLEAD
+      type: string
+      description: |-
+        * `SIMPLE` - Simple Student
+        * `TEAMLEAD` - Team Leader
+    LoginRequest:
+      type: object
+      description: Serializer for user login
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    NullEnum:
+      enum:
+      - null
+    PaginatedRecruiterProfileList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecruiterProfile'
+    PaginatedStaffProfileList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffProfile'
+    PaginatedStudentProfileList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentProfile'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PaginatedWorkspaceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    PaginatedWorkspaceMemberList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+    PatchedRecruiterProfileRequest:
+      type: object
+      description: Serializer for Recruiter profile details
+      properties:
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        company_website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        company_description:
+          type: string
+          nullable: true
+    PatchedRecruiterUpdateRequest:
+      type: object
+      description: Serializer for updating Recruiter profile
+      properties:
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        company_website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        company_description:
+          type: string
+          nullable: true
+    PatchedStaffProfileRequest:
+      type: object
+      description: Serializer for Staff profile details
+      properties:
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+    PatchedStaffUpdateRequest:
+      type: object
+      description: Serializer for updating Staff profile
+      properties:
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+    PatchedStudentProfileRequest:
+      type: object
+      description: Serializer for Student profile details
+      properties:
+        it_skills: {}
+        semester:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/SemesterEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        year_of_study:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/YearOfStudyEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        resume_file:
+          type: string
+          format: binary
+          nullable: true
+          pattern: (?:pdf|doc|docx)$
+        jlpt:
+          type: string
+          nullable: true
+          maxLength: 10
+        ielts:
+          type: string
+          nullable: true
+          maxLength: 10
+        level_status:
+          $ref: '#/components/schemas/LevelStatusEnum'
+    PatchedStudentUpdateRequest:
+      type: object
+      description: Serializer for updating Student profile
+      properties:
+        it_skills: {}
+        semester:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/SemesterEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        year_of_study:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/YearOfStudyEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        resume_file:
+          type: string
+          format: binary
+          nullable: true
+          pattern: (?:pdf|doc|docx)$
+        jlpt:
+          type: string
+          nullable: true
+          maxLength: 10
+        ielts:
+          type: string
+          nullable: true
+          maxLength: 10
+        level_status:
+          $ref: '#/components/schemas/LevelStatusEnum'
+    PatchedUserUpdateRequest:
+      type: object
+      description: Serializer for updating User details
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        photo:
+          type: string
+          format: binary
+          nullable: true
+        is_active:
+          type: boolean
+    PatchedWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Ish Maydoni
+          maxLength: 200
+        description:
+          type: string
+          title: Tavsifi
+        is_active:
+          type: boolean
+          title: Faol ish maydoni
+        max_members:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Maksimal a'zolar soni
+        workspace_type:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceTypeEnum'
+          title: Ish maydoni turi
+    RecruiterProfile:
+      type: object
+      description: Serializer for Recruiter profile details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        company_website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        company_description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+      - user
+    RecruiterProfileRequest:
+      type: object
+      description: Serializer for Recruiter profile details
+      properties:
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        company_website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        company_description:
+          type: string
+          nullable: true
+    RecruiterUpdateRequest:
+      type: object
+      description: Serializer for updating Recruiter profile
+      properties:
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        company_website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        company_description:
+          type: string
+          nullable: true
+    RoleEnum:
+      enum:
+      - MEMBER
+      - MODERATOR
+      - ADMIN
+      type: string
+      description: |-
+        * `MEMBER` - Member
+        * `MODERATOR` - Moderator
+        * `ADMIN` - Admin
+    SemesterEnum:
+      enum:
+      - 1
+      - 2
+      type: integer
+      description: |-
+        * `1` - 1st Semester
+        * `2` - 2nd Semester
+    StaffProfile:
+      type: object
+      description: Serializer for Staff profile details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+      - user
+    StaffProfileRequest:
+      type: object
+      description: Serializer for Staff profile details
+      properties:
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+    StaffUpdateRequest:
+      type: object
+      description: Serializer for updating Staff profile
+      properties:
+        position:
+          type: string
+          nullable: true
+          maxLength: 100
+    StudentProfile:
+      type: object
+      description: Serializer for Student profile details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        student_id:
+          type: string
+          readOnly: true
+          nullable: true
+        it_skills: {}
+        semester:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/SemesterEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        year_of_study:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/YearOfStudyEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        resume_file:
+          type: string
+          format: uri
+          nullable: true
+          pattern: (?:pdf|doc|docx)$
+        jlpt:
+          type: string
+          nullable: true
+          maxLength: 10
+        ielts:
+          type: string
+          nullable: true
+          maxLength: 10
+        level_status:
+          $ref: '#/components/schemas/LevelStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - student_id
+      - updated_at
+      - user
+    StudentProfileRequest:
+      type: object
+      description: Serializer for Student profile details
+      properties:
+        it_skills: {}
+        semester:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/SemesterEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        year_of_study:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/YearOfStudyEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        resume_file:
+          type: string
+          format: binary
+          nullable: true
+          pattern: (?:pdf|doc|docx)$
+        jlpt:
+          type: string
+          nullable: true
+          maxLength: 10
+        ielts:
+          type: string
+          nullable: true
+          maxLength: 10
+        level_status:
+          $ref: '#/components/schemas/LevelStatusEnum'
+    StudentUpdateRequest:
+      type: object
+      description: Serializer for updating Student profile
+      properties:
+        it_skills: {}
+        semester:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/SemesterEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        year_of_study:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/YearOfStudyEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        resume_file:
+          type: string
+          format: binary
+          nullable: true
+          pattern: (?:pdf|doc|docx)$
+        jlpt:
+          type: string
+          nullable: true
+          maxLength: 10
+        ielts:
+          type: string
+          nullable: true
+          maxLength: 10
+        level_status:
+          $ref: '#/components/schemas/LevelStatusEnum'
+    User:
+      type: object
+      description: Serializer for displaying User details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        user_type:
+          $ref: '#/components/schemas/UserTypeEnum'
+        is_active:
+          type: boolean
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - first_name
+      - id
+      - last_name
+      - username
+    UserCreateRequest:
+      type: object
+      description: Serializer for Admin to create new users
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        confirm_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        user_type:
+          $ref: '#/components/schemas/UserTypeEnum'
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+      required:
+      - confirm_password
+      - email
+      - first_name
+      - last_name
+      - password
+    UserRequest:
+      type: object
+      description: Serializer for displaying User details
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        user_type:
+          $ref: '#/components/schemas/UserTypeEnum'
+        is_active:
+          type: boolean
+        photo:
+          type: string
+          format: binary
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+      required:
+      - email
+      - first_name
+      - last_name
+    UserTypeEnum:
+      enum:
+      - STUDENT
+      - STAFF
+      - RECRUITER
+      - ADMIN
+      type: string
+      description: |-
+        * `STUDENT` - Student
+        * `STAFF` - Staff
+        * `RECRUITER` - Recruiter
+        * `ADMIN` - Admin
+    UserUpdateRequest:
+      type: object
+      description: Serializer for updating User details
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        photo:
+          type: string
+          format: binary
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - first_name
+      - last_name
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Ish Maydoni
+          maxLength: 200
+        description:
+          type: string
+          title: Tavsifi
+        created_by:
+          type: integer
+          readOnly: true
+          title: Yaratgan foydalanuvchi
+        is_active:
+          type: boolean
+          title: Faol ish maydoni
+        max_members:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Maksimal a'zolar soni
+        workspace_type:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceTypeEnum'
+          title: Ish maydoni turi
+        workspace_type_display:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Yaratilgan sana
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Yangilangan sana
+        active_members_count:
+          type: integer
+          readOnly: true
+      required:
+      - active_members_count
+      - created_at
+      - created_by
+      - id
+      - name
+      - updated_at
+      - workspace_type_display
+    WorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        workspace:
+          allOf:
+          - $ref: '#/components/schemas/Workspace'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          title: A'zolik roli
+        role_display:
+          type: string
+          readOnly: true
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Qo'shilgan sana
+        is_active:
+          type: boolean
+          title: Faol a'zo
+        last_activity:
+          type: string
+          format: date-time
+          readOnly: true
+          title: So'nggi faoliyat
+      required:
+      - id
+      - joined_at
+      - last_activity
+      - role_display
+      - user
+      - workspace
+    WorkspaceMemberCreateRequest:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          writeOnly: true
+        workspace_id:
+          type: integer
+          writeOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          default: MEMBER
+        is_active:
+          type: boolean
+          title: Faol a'zo
+      required:
+      - user_id
+    WorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Ish Maydoni
+          maxLength: 200
+        description:
+          type: string
+          title: Tavsifi
+        is_active:
+          type: boolean
+          title: Faol ish maydoni
+        max_members:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Maksimal a'zolar soni
+        workspace_type:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceTypeEnum'
+          title: Ish maydoni turi
+      required:
+      - name
+    WorkspaceTypeEnum:
+      enum:
+      - GENERAL
+      - PROJECT
+      - STUDY
+      - MEETING
+      type: string
+      description: |-
+        * `GENERAL` - General
+        * `PROJECT` - Project
+        * `STUDY` - Study
+        * `MEETING` - Meeting
+    YearOfStudyEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - 1-Year
+        * `2` - 2-Year
+        * `3` - 3-Year
+        * `4` - 4-Year
+        * `5` - 5-Year
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers:
+- url: http://localhost:8000
+  description: Local server
