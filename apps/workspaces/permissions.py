@@ -7,8 +7,6 @@ class IsAdminUserType(permissions.BasePermission):
         user = request.user
         return bool(user and user.is_authenticated and getattr(user, 'user_type', None) == 'ADMIN')
     
-
-
 class IsWorkspaceMember(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
@@ -19,7 +17,6 @@ class IsWorkspaceMember(permissions.BasePermission):
             return True
         return WorkspaceMember.objects.filter(workspace=obj, user=user, is_active=True).exists()
     
-
 class IsAdminOrWorkspaceMemberReadOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):

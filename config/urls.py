@@ -21,6 +21,7 @@ urlpatterns = [
     # API Endpoints v1
     path('users/', include('apps.users.urls')),
     path('workspaces/', include('apps.workspaces.urls')),
+    path('tasks/', include('apps.tasks.urls')),
 ]
 
 if settings.DEBUG:

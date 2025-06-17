@@ -39,5 +39,4 @@ class IsProfileOwner(permissions.BasePermission):
         # Profil modellarini (Student, Staff, Recruiter) tekshirish
         if hasattr(obj, 'user'):
             return obj.user == request.user
-            
         return False

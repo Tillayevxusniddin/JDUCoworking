@@ -59,7 +59,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'is_active': {'help_text': 'Foydalanuvchi hisobining faolligi (faqat Admin o`zgartira oladi).'}
         }
 
-
 class StudentProfileSerializer(serializers.ModelSerializer):
     """Talaba profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
@@ -79,7 +78,6 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
         fields = ['it_skills', 'semester', 'year_of_study', 'hire_date', 'bio',
                   'resume_file', 'jlpt', 'ielts', 'level_status']
 
-
 class RecruiterProfileSerializer(serializers.ModelSerializer):
     """Ishga oluvchi profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
@@ -96,7 +94,6 @@ class RecruiterUpdateSerializer(serializers.ModelSerializer):
         model = Recruiter
         fields = ['company_name', 'position', 'company_website', 'company_description']
 
-
 class StaffProfileSerializer(serializers.ModelSerializer):
     """Xodim profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
@@ -111,7 +108,6 @@ class StaffUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff
         fields = ['position']
-
 
 class LoginSerializer(serializers.Serializer):
     """Foydalanuvchi tizimga kirishi uchun serializer"""
