@@ -1,8 +1,9 @@
+# apps/tasks/admin.py
+
 from django.contrib import admin
 from .models import Task, TaskComment
 
 class TaskCommentInline(admin.TabularInline):
-    """Vazifa sahifasida izohlarni ko'rsatish va tahrirlash uchun inline."""
     model = TaskComment
     extra = 1
     readonly_fields = ('user', 'created_at')
@@ -10,10 +11,10 @@ class TaskCommentInline(admin.TabularInline):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'assigned_to', 'created_by', 'status', 'priority', 'due_date', 'created_at')
-    list_filter = ('status', 'priority', 'due_date')
-    search_fields = ('title', 'description', 'assigned_to__email', 'created_by__email')
-    raw_id_fields = ('assigned_to', 'created_by')
+    list_display = ('title', 'workspace', 'assigned_to', 'created_by', 'status', 'priority', 'due_date')
+    list_filter = ('status', 'priority', 'due_date', 'workspace')
+    search_fields = ('title', 'description', 'assigned_to__email', 'created_by__email', 'workspace__name')
+    raw_id_fields = ('assigned_to', 'created_by', 'workspace')
     readonly_fields = ('created_at', 'updated_at', 'completed_at')
     inlines = [TaskCommentInline]
 

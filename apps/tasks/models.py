@@ -1,5 +1,8 @@
+# apps/tasks/models.py
+
 from django.db import models
 from apps.users.models import User
+from apps.workspaces.models import Workspace
 
 class Task(models.Model):
     STATUS_CHOICES = (
@@ -9,13 +12,21 @@ class Task(models.Model):
         ('FAILED', 'Failed'),
         ('CANCELED', 'Canceled')
     )
-
     PRIORITY_CHOICES = (
         ('LOW', 'Low'),
         ('MEDIUM', 'Medium'),
         ('HIGH', 'High'),
         ('URGENT', 'Urgent')
     )
+
+    # --- Y A N G I   M A Y D O N ---
+    workspace = models.ForeignKey(
+        Workspace, 
+        on_delete=models.CASCADE, 
+        related_name='tasks', 
+        verbose_name="Ish maydoni"
+    )
+    # -----------------------------
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
@@ -31,9 +42,10 @@ class Task(models.Model):
     class Meta:
         db_table = 'tasks'
         ordering = ['-created_at']
+
     def __str__(self):
-        return self.title
-    
+        return f"{self.title} ({self.workspace.name})"
+
 class TaskComment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_comments')
@@ -45,5 +57,4 @@ class TaskComment(models.Model):
         ordering = ['created_at']
 
     def __str__(self):
-            return f"Comment on {self.task.title} by {self.user.first_name} {self.user.last_name}"
-
+        return f"Comment on {self.task.title} by {self.user.first_name} {self.user.last_name}"
