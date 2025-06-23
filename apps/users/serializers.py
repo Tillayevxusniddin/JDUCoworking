@@ -1,127 +1,141 @@
 # apps/users/serializers.py
 
+import json
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, Student, Recruiter, Staff
 import time
 
-# --- Y A N G I   S E R I A L I Z E R ---
-class LogoutSerializer(serializers.Serializer):
-    """Logout uchun refresh tokenni qabul qiluvchi serializer."""
-    refresh = serializers.CharField()
-# ----------------------------------------
+class StringifiedJSONField(serializers.JSONField):
+    """
+    Matn (string) ko'rinishida kelgan JSON'ni to'g'ri qabul qilib,
+    Python obyektiga (list/dict) o'girib beradigan maxsus maydon.
+    Bu aynan multipart/form-data bilan ishlash uchun kerak.
+    """
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            try:
+                # Matnni JSON sifatida o'qiymiz
+                return json.loads(data)
+            except (json.JSONDecodeError, TypeError):
+                self.fail('invalid', input=data)
+        # Agar ma'lumot allaqachon JSON bo'lsa (masalan, raw/json so'rovdan)
+        # uni standart usulda qayta ishlaymiz.
+        return super().to_internal_value(data)
 
+# --- AUTH SERIALIZER'LARI ---
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(required=True, style={'input_type': 'password'})
+    def validate(self, data):
+        user = authenticate(username=data['email'], password=data['password'])
+        if not user or not user.is_active:
+            raise serializers.ValidationError("Email yoki parol noto'g'ri yoki hisob faol emas.")
+        data['user'] = user
+        return data
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, min_length=8)
+    confirm_password = serializers.CharField(required=True, write_only=True)
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Eski parol noto'g'ri")
+        return value
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"new_password": "Yangi parollar mos kelmadi"})
+        return attrs
+
+# --- USER MANAGEMENT SERIALIZER'LARI ---
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'date_of_birth',
-                  'user_type', 'is_active', 'photo', 'phone_number', 'created_at']
-        read_only_fields = ['id', 'username', 'created_at', 'user_type']
+        exclude = ('password', 'groups', 'user_permissions', 'last_login')
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, min_length=8, style={'input_type': 'password'})
-    confirm_password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
     class Meta:
         model = User
-        fields = ['email', 'password', 'confirm_password', 'first_name', 'last_name',
-                  'date_of_birth', 'user_type', 'phone_number']
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"password": "Parollar mos kelmaydi."})
-        return attrs
-
+        fields = ['email', 'password', 'first_name', 'last_name', 'user_type', 'phone_number']
     def create(self, validated_data):
-        validated_data.pop('confirm_password')
+        # ... (bu qism o'zgarishsiz qoladi)
         password = validated_data.pop('password')
-        validated_data['username'] = validated_data['email']
-        
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-
         if user.user_type == 'STUDENT':
-            student_id = f"STU-{user.id:04d}-{int(time.time())}"
-            Student.objects.create(user=user, student_id=student_id)
+            Student.objects.create(user=user)
         elif user.user_type == 'RECRUITER':
             Recruiter.objects.create(user=user)
         elif user.user_type == 'STAFF':
             Staff.objects.create(user=user)
-            
         return user
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'photo', 'is_active']
-        extra_kwargs = {
-            'is_active': {'help_text': 'Foydalanuvchi hisobining faolligi (faqat Admin o`zgartira oladi).'}
-        }
+
+
+# --- STUDENT PROFILE SERIALIZER'LARI ---
 
 class StudentProfileSerializer(serializers.ModelSerializer):
+    """Talaba profilini KO'RISH uchun serializer (barcha maydonlar)."""
     user = UserSerializer(read_only=True)
-    level_status_display = serializers.CharField(source='get_level_status_display', read_only=True)
     class Meta:
         model = Student
         fields = '__all__'
-        read_only_fields = ['id', 'user', 'student_id', 'created_at', 'updated_at', 'level_status_display']
 
-class StudentUpdateSerializer(serializers.ModelSerializer):
+class StudentProfilePersonalUpdateSerializer(serializers.ModelSerializer):
+    """Talabaning O'ZI profilini tahrirlashi uchun (cheklangan maydonlar)."""
+    
+    # Oddiy JSONField o'rniga o'zimiz yaratgan maxsus maydonni ishlatamiz
+    it_skills = StringifiedJSONField(required=False)
+
     class Meta:
         model = Student
-        fields = ['it_skills', 'semester', 'year_of_study', 'hire_date', 'bio',
-                  'resume_file', 'jlpt', 'ielts', 'level_status']
+        fields = ['it_skills', 'bio', 'resume_file', 'jlpt', 'ielts']
+
+class StudentProfileAdminUpdateSerializer(serializers.ModelSerializer):
+    """ADMIN yoki STAFF tomonidan talaba profilini tahrirlash uchun (barcha maydonlar)."""
+    class Meta:
+        model = Student
+        fields = '__all__'
+        read_only_fields = ['user', 'student_id'] # Userni o'zgartirib bo'lmaydi
+
+
+# --- RECRUITER PROFILE SERIALIZER'LARI ---
 
 class RecruiterProfileSerializer(serializers.ModelSerializer):
+    """Ishga oluvchi profilini KO'RISH uchun serializer."""
     user = UserSerializer(read_only=True)
     class Meta:
         model = Recruiter
         fields = '__all__'
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
-class RecruiterUpdateSerializer(serializers.ModelSerializer):
+class RecruiterProfileUpdateSerializer(serializers.ModelSerializer):
+    """RECRUITER yoki ADMIN tomonidan profilni tahrirlash uchun."""
     class Meta:
         model = Recruiter
         fields = ['company_name', 'position', 'company_website', 'company_description']
 
+
+# --- STAFF PROFILE SERIALIZER'LARI ---
+
 class StaffProfileSerializer(serializers.ModelSerializer):
+    """Xodim profilini KO'RISH uchun serializer."""
     user = UserSerializer(read_only=True)
     class Meta:
         model = Staff
         fields = '__all__'
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
-class StaffUpdateSerializer(serializers.ModelSerializer):
+class StaffProfileUpdateSerializer(serializers.ModelSerializer):
+    """STAFF yoki ADMIN tomonidan profilni tahrirlash uchun."""
     class Meta:
         model = Staff
         fields = ['position']
-
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(required=True, style={'input_type': 'password'})
-
-    def validate(self, data):
-        user = authenticate(username=data['email'], password=data['password'])
-        if not user:
-            raise serializers.ValidationError("Email yoki parol noto'g'ri")
-        if not user.is_active:
-            raise serializers.ValidationError("Bu hisob faol emas")
-        data['user'] = user
-        return data
-
-class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
-    new_password = serializers.CharField(required=True, write_only=True, min_length=8, style={'input_type': 'password'})
-    confirm_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
-
-    def validate_old_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Eski parol noto'g'ri")
-        return value
-
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"new_password": "Yangi parollar mos kelmadi"})
-        return attrs

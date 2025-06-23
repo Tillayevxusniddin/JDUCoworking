@@ -1,3 +1,5 @@
+# apps/users/permissions.py
+
 from rest_framework import permissions
 
 class IsAdminUser(permissions.BasePermission):
@@ -28,15 +30,10 @@ class IsAdminOrStaff(permissions.BasePermission):
 class IsProfileOwner(permissions.BasePermission):
     """Obyekt egasi yoki Admin uchun ruxsat."""
     def has_object_permission(self, request, view, obj):
-        # Admin barcha obyektlarga kira oladi
         if request.user.user_type == 'ADMIN':
             return True
-        
-        # User modelini tekshirish
-        if isinstance(obj, request.user.__class__):
-            return obj == request.user
-            
-        # Profil modellarini (Student, Staff, Recruiter) tekshirish
         if hasattr(obj, 'user'):
+            # Profil modellarini tekshirish (Student, Staff, Recruiter)
             return obj.user == request.user
-        return False
+        # User modelini tekshirish
+        return obj == request.user

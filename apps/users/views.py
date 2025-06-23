@@ -7,14 +7,13 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import User, Student, Recruiter, Staff
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
-    StudentProfileSerializer, StudentUpdateSerializer,
-    RecruiterProfileSerializer, RecruiterUpdateSerializer,
-    StaffProfileSerializer, StaffUpdateSerializer,
+    StudentProfileSerializer, StudentProfilePersonalUpdateSerializer, StudentProfileAdminUpdateSerializer,
+    RecruiterProfileSerializer, RecruiterProfileUpdateSerializer,
+    StaffProfileSerializer, StaffProfileUpdateSerializer,
     LoginSerializer, ChangePasswordSerializer, LogoutSerializer
 )
 from .permissions import (
-    IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsProfileOwner,
-    IsAdminOrStaff
+    IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsProfileOwner, IsAdminOrStaff
 )
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, extend_schema_view
@@ -266,215 +265,156 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
-
 # ------------------- PROFIL VIEWSETLAR UCHUN O'ZGARISH JOYLARI -------------------
 
 @extend_schema_view(
-    # ... `create` uchun schema olib tashlandi
-    list=extend_schema(
-        summary="🎓 List all student profiles",
-        description="Barcha talabalar profillari ro'yxati (Admin va Staff uchun)",
-        tags=["Student Profiles"],
-        parameters=[
-            # ... filtrlash parametrlari o'zgarishsiz qoladi
-        ]
-    ),
-    retrieve=extend_schema(summary="🎓 Retrieve student profile", tags=["Student Profiles"]),
-    update=extend_schema(summary="✏️ Update student profile", tags=["Student Profiles"]),
-    partial_update=extend_schema(summary="📝 Partial update student profile", tags=["Student Profiles"]),
-    destroy=extend_schema(summary="🗑️ Delete student profile", tags=["Student Profiles"]),
+    list=extend_schema(summary="🎓 List all student profiles (Admin/Staff only)", tags=["Student Profiles"]),
+    retrieve=extend_schema(summary="🎓 Retrieve student profile (Admin/Staff only)", tags=["Student Profiles"]),
+    update=extend_schema(summary="✏️ Update student profile (Admin/Staff only)", tags=["Student Profiles"]),
+    partial_update=extend_schema(summary="📝 Partial update student profile (Admin/Staff only)", tags=["Student Profiles"]),
+    destroy=extend_schema(summary="🗑️ Delete student profile (Admin/Staff only)", tags=["Student Profiles"]),
+    me=extend_schema(summary="getMyStudentProfile 🎓 Get/Update my student profile", tags=["Student Profiles"])
 )
-class StudentProfileViewSet(mixins.ListModelMixin,
-                            mixins.RetrieveModelMixin,
-                            mixins.UpdateModelMixin,
-                            mixins.DestroyModelMixin,
-                            viewsets.GenericViewSet): # <--- 1-O'ZGARISH: ModelViewSet o'rniga mixin'lar
-    """
-    🎓 Student Profile Management
-    
-    Talabalar profillari bilan ishlash (yangi profil yaratishdan tashqari)
-    """
+class StudentProfileViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.select_related('user').all()
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['level_status', 'semester', 'year_of_study']
-    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'student_id']
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
 
     def get_serializer_class(self):
-        if self.action in ['update', 'partial_update', 'me']:
-            return StudentUpdateSerializer
-        return StudentProfileSerializer
+        user = self.request.user
+        
+        # Agar GET so'rovi bo'lsa (list, retrieve), to'liq ma'lumotni ko'rsatamiz
+        if self.action in ['list', 'retrieve']:
+            return StudentProfileSerializer
+        
+        # Agar tahrirlash bo'lsa...
+        if self.action in ['update', 'partial_update']:
+            # Agar ADMIN yoki STAFF tahrirlasa, barcha maydonlarga ruxsat beramiz
+            if user.user_type in ['ADMIN', 'STAFF']:
+                return StudentProfileAdminUpdateSerializer
+            # Agar STUDENT o'z profilini tahrirlasa, cheklangan maydonlarga ruxsat beramiz
+            elif user.user_type == 'STUDENT':
+                return StudentProfilePersonalUpdateSerializer
+        
+        # "me" action uchun ham alohida tekshiruv
+        if self.action == 'me':
+             return StudentProfilePersonalUpdateSerializer
+
+        return StudentProfileSerializer # Boshqa holatlar uchun standart
 
     def get_permissions(self):
-        # --- XATOLIK TUZATILGAN JOY ---
-        if self.action == 'list':
-            # Ro'yxatni ko'rish uchun foydalanuvchi ADMIN yoki STAFF bo'lishi kerak.
-            # IsAdminOrStaff permission'i ichida `is_authenticated` ham tekshiriladi.
-            return [IsAdminOrStaff()]
-        elif self.action == 'destroy':
-            return [IsAdminUser()]
-        # Qolgan barcha holatlarda (retrieve, update, me) tizimga kirgan bo'lishi kifoya.
-        # Keyingi tekshiruv (obyekt egasi) IsProfileOwner orqali amalga oshiriladi.
-        return [permissions.IsAuthenticated()]
-        # -----------------------------
+        # /me endpointiga faqat tegishli student kira oladi
+        if self.action == 'me':
+            self.permission_classes = [permissions.IsAuthenticated, IsStudentUser]
+        # Boshqa barcha CRUD amallari uchun faqat Admin va Staff
+        else:
+            self.permission_classes = [permissions.IsAuthenticated, IsAdminOrStaff]
+        return super().get_permissions()
 
     def get_queryset(self):
-        # ... mantiq o'zgarishsiz qoladi
-        if getattr(self, 'swagger_fake_view', False):
-            return self.queryset.none()
-        
+        """ADMIN va STAFF umumiy ro'yxatni ko'ra oladi."""
         user = self.request.user
-        if user.user_type in ['ADMIN', 'STAFF']:
+        if user.is_authenticated and user.user_type in ['ADMIN', 'STAFF']:
             return self.queryset
-        elif user.user_type == 'STUDENT':
-            return self.queryset.filter(user=user)
-        return self.queryset.none()
-
-    def perform_update(self, serializer):
-        # ... mantiq o'zgarishsiz qoladi
-        instance = self.get_object()
-        if not IsProfileOwner().has_object_permission(self.request, self, instance):
-            self.permission_denied(self.request)
-        serializer.save()
+        return self.queryset.none() # Boshqalar uchun bo'sh ro'yxat
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request):
-        # ... mantiq o'zgarishsiz qoladi
         try:
-            instance = Student.objects.get(user=request.user)
+            instance = request.user.student_profile
         except Student.DoesNotExist:
             return Response({'error': 'Student profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.method == 'GET':
-            serializer = StudentProfileSerializer(instance)
-            return Response(serializer.data)
+            return Response(StudentProfileSerializer(instance).data)
         
-        partial = request.method == 'PATCH'
-        serializer = StudentUpdateSerializer(instance, data=request.data, partial=partial)
+        # PUT va PATCH uchun to'g'ri serializer'ni tanlaymiz
+        serializer = self.get_serializer(instance, data=request.data, partial=request.method == 'PATCH')
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(StudentProfileSerializer(instance).data)
 
-    # 2-O'ZGARISH: `create` metodi olib tashlandi, chunki u endi mavjud emas
-
-
 @extend_schema_view(
-    # ... `create` uchun schema olib tashlandi
-    list=extend_schema(summary="💼 List all recruiter profiles", tags=["Recruiter Profiles"]),
-    retrieve=extend_schema(summary="💼 Retrieve recruiter profile", tags=["Recruiter Profiles"]),
-    update=extend_schema(summary="✏️ Update recruiter profile", tags=["Recruiter Profiles"]),
-    partial_update=extend_schema(summary="📝 Partial update recruiter profile", tags=["Recruiter Profiles"]),
-    destroy=extend_schema(summary="🗑️ Delete recruiter profile", tags=["Recruiter Profiles"]),
+    list=extend_schema(summary="💼 List all recruiter profiles (Admin only)", tags=["Recruiter Profiles"]),
+    retrieve=extend_schema(summary="💼 Retrieve recruiter profile (Admin only)", tags=["Recruiter Profiles"]),
+    update=extend_schema(summary="✏️ Update recruiter profile (Admin only)", tags=["Recruiter Profiles"]),
+    partial_update=extend_schema(summary="📝 Partial update recruiter profile (Admin only)", tags=["Recruiter Profiles"]),
+    destroy=extend_schema(summary="🗑️ Delete recruiter profile (Admin only)", tags=["Recruiter Profiles"]),
+    me=extend_schema(summary="getMyRecruiterProfile 💼 Get/Update my recruiter profile", tags=["Recruiter Profiles"])
 )
-class RecruiterProfileViewSet(mixins.ListModelMixin,
-                                mixins.RetrieveModelMixin,
-                                mixins.UpdateModelMixin,
-                                mixins.DestroyModelMixin,
-                                viewsets.GenericViewSet):
-    """
-    💼 Recruiter Profile Management
-    """
+class RecruiterProfileViewSet(viewsets.ModelViewSet):
     queryset = Recruiter.objects.select_related('user').all()
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['company_name']
-    search_fields = ['user__first_name', 'user__last_name', 'company_name']
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
 
     def get_serializer_class(self):
-        if self.action in ['update', 'partial_update', 'me']:
-            return RecruiterUpdateSerializer
-        return RecruiterProfileSerializer
-    
-    # ... `get_permissions` va `get_queryset` mantiqlari StudentProfileViewSet'ga o'xshash
+        if self.action in ['list', 'retrieve']:
+            return RecruiterProfileSerializer
+        # Admin yoki Recruiter'ning o'zi tahrirlashi mumkin
+        return RecruiterProfileUpdateSerializer
+
     def get_permissions(self):
-        if self.action == 'destroy':
-            return [IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+        if self.action == 'me':
+            self.permission_classes = [permissions.IsAuthenticated, IsRecruiterUser]
+        else:
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
 
     def get_queryset(self):
-        user = self.request.user
-        if getattr(self, 'swagger_fake_view', False) or not user.is_authenticated:
-            return self.queryset.none()
-        if user.user_type == 'ADMIN':
+        if self.request.user.is_authenticated and self.request.user.user_type == 'ADMIN':
             return self.queryset
-        elif user.user_type == 'RECRUITER':
-            return self.queryset.filter(user=user)
         return self.queryset.none()
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request):
         try:
-            instance = Recruiter.objects.get(user=request.user)
+            instance = request.user.recruiter_profile
         except Recruiter.DoesNotExist:
             return Response({'error': 'Recruiter profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
-
+        
         if request.method == 'GET':
             return Response(RecruiterProfileSerializer(instance).data)
-
-        partial = request.method == 'PATCH'
-        serializer = RecruiterUpdateSerializer(instance, data=request.data, partial=partial)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=request.method == 'PATCH')
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(RecruiterProfileSerializer(instance).data)
 
-
 @extend_schema_view(
-    # ... `create` uchun schema olib tashlandi
-    list=extend_schema(summary="👔 List all staff profiles", tags=["Staff Profiles"]),
-    retrieve=extend_schema(summary="👔 Retrieve staff profile", tags=["Staff Profiles"]),
-    update=extend_schema(summary="✏️ Update staff profile", tags=["Staff Profiles"]),
-    partial_update=extend_schema(summary="📝 Partial update staff profile", tags=["Staff Profiles"]),
-    destroy=extend_schema(summary="🗑️ Delete staff profile", tags=["Staff Profiles"]),
+    list=extend_schema(summary="👔 List all staff profiles (Admin only)", tags=["Staff Profiles"]),
+    retrieve=extend_schema(summary="👔 Retrieve staff profile (Admin only)", tags=["Staff Profiles"]),
+    update=extend_schema(summary="✏️ Update staff profile (Admin only)", tags=["Staff Profiles"]),
+    partial_update=extend_schema(summary="📝 Partial update staff profile (Admin only)", tags=["Staff Profiles"]),
+    destroy=extend_schema(summary="🗑️ Delete staff profile (Admin only)", tags=["Staff Profiles"]),
+    me=extend_schema(summary="getMyStaffProfile 👔 Get/Update my staff profile", tags=["Staff Profiles"])
 )
-class StaffProfileViewSet(mixins.ListModelMixin,
-                          mixins.RetrieveModelMixin,
-                          mixins.UpdateModelMixin,
-                          mixins.DestroyModelMixin,
-                          viewsets.GenericViewSet):
-    """
-    👔 Staff Profile Management
-    """
+class StaffProfileViewSet(viewsets.ModelViewSet):
     queryset = Staff.objects.select_related('user').all()
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['user__first_name', 'user__last_name', 'position']
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
 
     def get_serializer_class(self):
-        if self.action in ['update', 'partial_update', 'me']:
-            return StaffUpdateSerializer
-        return StaffProfileSerializer
+        if self.action in ['list', 'retrieve']:
+            return StaffProfileSerializer
+        return StaffProfileUpdateSerializer
 
     def get_permissions(self):
-        if self.action == 'destroy':
-            return [IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+        if self.action == 'me':
+            self.permission_classes = [permissions.IsAuthenticated, IsStaffUser]
+        else:
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
 
     def get_queryset(self):
-        user = self.request.user
-        if getattr(self, 'swagger_fake_view', False) or not user.is_authenticated:
-            return self.queryset.none()
-        if user.user_type == 'ADMIN':
+        if self.request.user.is_authenticated and self.request.user.user_type == 'ADMIN':
             return self.queryset
-        elif user.user_type == 'STAFF':
-            # Staff faqat o'z profilini ko'rishi yoki barcha stafflarni ko'ra olishi biznes mantiqqa bog'liq
-            return self.queryset.filter(user=user) 
         return self.queryset.none()
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request):
         try:
-            instance = Staff.objects.get(user=request.user)
+            instance = request.user.staff_profile
         except Staff.DoesNotExist:
             return Response({'error': 'Staff profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
-
+        
         if request.method == 'GET':
             return Response(StaffProfileSerializer(instance).data)
-
-        partial = request.method == 'PATCH'
-        serializer = StaffUpdateSerializer(instance, data=request.data, partial=partial)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=request.method == 'PATCH')
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(StaffProfileSerializer(instance).data)
