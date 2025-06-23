@@ -10,10 +10,11 @@ from .serializers import (
     StudentProfileSerializer, StudentUpdateSerializer,
     RecruiterProfileSerializer, RecruiterUpdateSerializer,
     StaffProfileSerializer, StaffUpdateSerializer,
-    LoginSerializer, ChangePasswordSerializer
+    LoginSerializer, ChangePasswordSerializer, LogoutSerializer
 )
 from .permissions import (
-    IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsProfileOwner
+    IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsProfileOwner,
+    IsAdminOrStaff
 )
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, extend_schema_view
@@ -115,8 +116,11 @@ class AuthViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         if self.action == 'change_password':
             return ChangePasswordSerializer
+        # --- LOGOUT UCHUN O'ZGARISH ---
+        elif self.action == 'logout':
+            return LogoutSerializer
         return LoginSerializer
-
+    
     @action(detail=False, methods=['post'])
     def login(self, request):
         """Foydalanuvchi tizimga kirishi"""
@@ -130,24 +134,19 @@ class AuthViewSet(viewsets.GenericViewSet):
             'refresh': str(refresh),
         })
 
+
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def logout(self, request):
         """Tizimdan chiqish va tokenni bekor qilish"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
-            refresh_token = request.data.get("refresh")
-            if not refresh_token:
-                return Response(
-                    {'error': 'Refresh token majburiy'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            refresh_token = serializer.validated_data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({'message': 'Muvaffaqiyatli chiqildi'})
+            return Response({'message': 'Muvaffaqiyatli chiqildi'}, status=status.HTTP_200_OK)
         except Exception:
-            return Response(
-                {'error': 'Noto\'g\'ri token'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Noto\'g\'ri token'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def change_password(self, request):
@@ -308,13 +307,17 @@ class StudentProfileViewSet(mixins.ListModelMixin,
         return StudentProfileSerializer
 
     def get_permissions(self):
-        if self.action == 'destroy':
+        # --- XATOLIK TUZATILGAN JOY ---
+        if self.action == 'list':
+            # Ro'yxatni ko'rish uchun foydalanuvchi ADMIN yoki STAFF bo'lishi kerak.
+            # IsAdminOrStaff permission'i ichida `is_authenticated` ham tekshiriladi.
+            return [IsAdminOrStaff()]
+        elif self.action == 'destroy':
             return [IsAdminUser()]
-        # ADMIN va STAFF barcha ro'yxatni ko'ra oladi
-        elif self.action == 'list':
-            return [permissions.IsAuthenticated(), IsAdminUser | IsStaffUser]
-        # Qolgan barcha holatlarda tizimga kirgan bo'lishi kifoya (obyekt darajasida IsProfileOwner tekshiradi)
+        # Qolgan barcha holatlarda (retrieve, update, me) tizimga kirgan bo'lishi kifoya.
+        # Keyingi tekshiruv (obyekt egasi) IsProfileOwner orqali amalga oshiriladi.
         return [permissions.IsAuthenticated()]
+        # -----------------------------
 
     def get_queryset(self):
         # ... mantiq o'zgarishsiz qoladi

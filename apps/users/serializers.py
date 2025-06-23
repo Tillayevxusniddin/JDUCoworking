@@ -1,12 +1,17 @@
+# apps/users/serializers.py
+
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, Student, Recruiter, Staff
-from drf_spectacular.utils import extend_schema_field
-from drf_spectacular.types import OpenApiTypes
 import time
 
+# --- Y A N G I   S E R I A L I Z E R ---
+class LogoutSerializer(serializers.Serializer):
+    """Logout uchun refresh tokenni qabul qiluvchi serializer."""
+    refresh = serializers.CharField()
+# ----------------------------------------
+
 class UserSerializer(serializers.ModelSerializer):
-    """Foydalanuvchi ma'lumotlarini ko'rsatish uchun serializer"""
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'first_name', 'last_name', 'date_of_birth',
@@ -14,7 +19,6 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'username', 'created_at', 'user_type']
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """Admin tomonidan yangi foydalanuvchi yaratish uchun serializer"""
     password = serializers.CharField(write_only=True, required=True, min_length=8, style={'input_type': 'password'})
     confirm_password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
 
@@ -31,16 +35,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('confirm_password')
         password = validated_data.pop('password')
-        # Usernameni email bilan bir xil qilib belgilaymiz
         validated_data['username'] = validated_data['email']
         
         user = User(**validated_data)
         user.set_password(password)
         user.save()
 
-        # user_type'ga qarab avtomatik profil yaratish
         if user.user_type == 'STUDENT':
-            # Unikal student_id generatsiya qilish
             student_id = f"STU-{user.id:04d}-{int(time.time())}"
             Student.objects.create(user=user, student_id=student_id)
         elif user.user_type == 'RECRUITER':
@@ -51,7 +52,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    """Foydalanuvchi ma'lumotlarini yangilash uchun serializer"""
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'photo', 'is_active']
@@ -60,57 +60,44 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         }
 
 class StudentProfileSerializer(serializers.ModelSerializer):
-    """Talaba profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
     level_status_display = serializers.CharField(source='get_level_status_display', read_only=True)
-
     class Meta:
         model = Student
-        fields = ['id', 'user', 'student_id', 'it_skills', 'semester', 'year_of_study',
-                  'hire_date', 'bio', 'resume_file', 'jlpt', 'ielts', 'level_status', 
-                  'level_status_display', 'created_at', 'updated_at']
+        fields = '__all__'
         read_only_fields = ['id', 'user', 'student_id', 'created_at', 'updated_at', 'level_status_display']
 
 class StudentUpdateSerializer(serializers.ModelSerializer):
-    """Talaba profilini yangilash uchun serializer"""
     class Meta:
         model = Student
         fields = ['it_skills', 'semester', 'year_of_study', 'hire_date', 'bio',
                   'resume_file', 'jlpt', 'ielts', 'level_status']
 
 class RecruiterProfileSerializer(serializers.ModelSerializer):
-    """Ishga oluvchi profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
-
     class Meta:
         model = Recruiter
-        fields = ['id', 'user', 'company_name', 'position', 'company_website',
-                  'company_description', 'created_at', 'updated_at']
+        fields = '__all__'
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 class RecruiterUpdateSerializer(serializers.ModelSerializer):
-    """Ishga oluvchi profilini yangilash uchun serializer"""
     class Meta:
         model = Recruiter
         fields = ['company_name', 'position', 'company_website', 'company_description']
 
 class StaffProfileSerializer(serializers.ModelSerializer):
-    """Xodim profili ma'lumotlari uchun serializer"""
     user = UserSerializer(read_only=True)
-
     class Meta:
         model = Staff
-        fields = ['id', 'user', 'position', 'created_at', 'updated_at']
+        fields = '__all__'
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 class StaffUpdateSerializer(serializers.ModelSerializer):
-    """Xodim profilini yangilash uchun serializer"""
     class Meta:
         model = Staff
         fields = ['position']
 
 class LoginSerializer(serializers.Serializer):
-    """Foydalanuvchi tizimga kirishi uchun serializer"""
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, style={'input_type': 'password'})
 
@@ -124,7 +111,6 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """Parolni o'zgartirish uchun serializer"""
     old_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
     new_password = serializers.CharField(required=True, write_only=True, min_length=8, style={'input_type': 'password'})
     confirm_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})

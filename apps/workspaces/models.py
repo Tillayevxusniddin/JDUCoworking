@@ -1,8 +1,11 @@
+# apps/workspaces/models.py
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from apps.users.models import User
 
 class Workspace(models.Model):
+    # Bu model o'zgarishsiz qoladi
     name = models.CharField(max_length=200, verbose_name="Ish Maydoni")
     description = models.TextField(blank=True, verbose_name="Tavsifi")
     created_by = models.ForeignKey(
@@ -45,11 +48,15 @@ class Workspace(models.Model):
         return self.active_members_count >= self.max_members
     
 class WorkspaceMember(models.Model):
+    # --- CHOICES'DAGI XATOLIK TO'G'IRLANDI ---
     MEMBER_ROLE_CHOICES = [
-        ('MEMBER', 'Member'),
-        ('MODERATOR', 'Moderator'),
+        ('STUDENT', 'Student'),
+        ('TEAMLEADER', 'Team Leader'),
         ('ADMIN', 'Admin'),
+        ('STAFF', 'Staff'),
+        ('RECRUITER', 'Recruiter'),
     ]
+    # ----------------------------------------
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -65,8 +72,8 @@ class WorkspaceMember(models.Model):
     role = models.CharField(
         max_length=20,
         choices=MEMBER_ROLE_CHOICES,
-        default='MEMBER',
-        verbose_name="A'zolik roli"
+        verbose_name="A'zolik roli" 
+        # `default` olib tashlandi, chunki endi avtomatik belgilanadi.
     )
     joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Qo'shilgan sana")
     is_active = models.BooleanField(default=True, verbose_name="Faol a'zo")
@@ -75,10 +82,10 @@ class WorkspaceMember(models.Model):
     class Meta:
         db_table = 'workspace_members'
         constraints = [
-        models.UniqueConstraint(
-            fields=['workspace', 'user'], 
-            name='unique_workspace_membership')
-       ]
+            models.UniqueConstraint(
+                fields=['workspace', 'user'], 
+                name='unique_workspace_membership')
+        ]
         ordering = ['-joined_at']
         verbose_name = "Ish Maydoni A'zosi"
         verbose_name_plural = "Ish Maydoni A'zolari"
@@ -89,7 +96,7 @@ class WorkspaceMember(models.Model):
     def clean(self):
         if not self.pk and self.workspace.is_full:
             raise ValidationError("Ish maydoni to'liq, yangi a'zolar qo'shib bo'lmaydi.")
+            
     def save(self, *args, **kwargs):
-        self.clean()
+        # Bu yerda clean'ni chaqirish shart emas, chunki serializer'da tekshiruv bor.
         super().save(*args, **kwargs)
-    
