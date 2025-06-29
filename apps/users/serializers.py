@@ -4,6 +4,7 @@ import json
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, Student, Recruiter, Staff
+from apps.workspaces.models import WorkspaceMember
 import time
 
 class StringifiedJSONField(serializers.JSONField):
@@ -59,15 +60,18 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
+    
     class Meta:
         model = User
         fields = ['email', 'password', 'first_name', 'last_name', 'user_type', 'phone_number']
+
     def create(self, validated_data):
-        # ... (bu qism o'zgarishsiz qoladi)
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        
+        # Foydalanuvchi turiga qarab profil yaratish
         if user.user_type == 'STUDENT':
             Student.objects.create(user=user)
         elif user.user_type == 'RECRUITER':
@@ -79,7 +83,61 @@ class UserCreateSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'photo', 'is_active']
+        fields = [
+            'first_name', 
+            'last_name', 
+            'user_type',
+            'date_of_birth', 
+            'phone_number', 
+            'photo', 
+            'is_active'
+        ]
+
+    def update(self, instance, validated_data):
+        """
+        User'ning user_type o'zgarganda eski profilni o'chirib, yangisini yaratadi
+        va workspace'dagi rollarini yangilaydi.
+        """
+        old_user_type = instance.user_type
+        new_user_type = validated_data.get('user_type', old_user_type)
+
+        # Agar user_type o'zgargan bo'lsa...
+        if old_user_type != new_user_type:
+            # 1. Eski profilni topib o'chiramiz
+            if old_user_type == 'STUDENT' and hasattr(instance, 'student_profile'):
+                instance.student_profile.delete()
+            elif old_user_type == 'RECRUITER' and hasattr(instance, 'recruiter_profile'):
+                instance.recruiter_profile.delete()
+            elif old_user_type == 'STAFF' and hasattr(instance, 'staff_profile'):
+                instance.staff_profile.delete()
+
+            # 2. Yangi profilni yaratamiz
+            if new_user_type == 'STUDENT':
+                Student.objects.create(user=instance)
+            elif new_user_type == 'RECRUITER':
+                Recruiter.objects.create(user=instance)
+            elif new_user_type == 'STAFF':
+                Staff.objects.create(user=instance)
+
+            # 3. Workspace'lardagi rolini yangilash
+            new_role_map = {
+                'STUDENT': 'STUDENT',
+                'STAFF': 'STAFF',
+                'RECRUITER': 'RECRUITER',
+                'ADMIN': 'ADMIN',
+            }
+            new_role = new_role_map.get(new_user_type)
+            if new_role:
+                # Agar student TEAMLEAD bo'lgan bo'lsa, uni oddiy STUDENT'ga aylantiramiz
+                # Chunki user_type o'zgardi. Yangi turda TEAMLEAD statusi bo'lmasligi mumkin.
+                if new_role == 'STUDENT' and hasattr(instance, 'student_profile'):
+                    if instance.student_profile.level_status == 'TEAMLEAD':
+                         new_role = 'TEAMLEADER'
+
+                WorkspaceMember.objects.filter(user=instance).update(role=new_role)
+
+        # Ota-klassning update metodini chaqirib, qolgan maydonlarni yangilaymiz
+        return super().update(instance, validated_data)
 
 
 # --- STUDENT PROFILE SERIALIZER'LARI ---

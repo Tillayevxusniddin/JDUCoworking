@@ -1,0 +1,9 @@
+Userni detail update qilganda faqat user_typeni ozini ozgaritirish kerak faqatgina bitta field bilan ham update qilsa boladigan qilishni korib chiqish kerak
+Userni user_type ozgargan vaqtda uni malumotlar bazasidan eski profilini ochirib yangi user_typega profil ochish kerak
+POSTMANDA BARCHA USERga oid endpointlarni sinab korish kerak
+
+
+jwtni boshqa xususiyatlarini ham qoshish kerak reset_password vahokozo
+google orqali authentication qilishni ham qoshish kerak loyihaga
+
+

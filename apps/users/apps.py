@@ -6,9 +6,9 @@ class UsersConfig(AppConfig):
     name = 'apps.users'
     verbose_name = 'Users'
 
-    # def ready(self):
-    #     """
-    #     Ilova tayyor bo'lganda signallarni import qilish.
-    #     """
-    #     import apps.users.signals # <-- SHU QATORNI QO'SHING
+    def ready(self):
+        """
+        Ilova tayyor bo'lganda signallarni import qilish.
+        """
+        import apps.users.signals # <-- SHU QATORNI QO'SHING
     
