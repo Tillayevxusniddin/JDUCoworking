@@ -23,32 +23,46 @@ class IsWorkspaceMember(permissions.BasePermission):
         # `obj` bu Task instansi
         return WorkspaceMember.objects.filter(workspace=obj.workspace, user=user, is_active=True).exists()
 
+# apps/tasks/permissions.py
+
 class IsTeamLeaderForAction(permissions.BasePermission):
     """
     Vazifa yaratish, o'zgartirish yoki o'chirish uchun foydalanuvchi TEAMLEADER ekanligini tekshiradi.
     """
-    message = "Bu amalni faqat ish maydonidagi Jamoa Lideri (Team Leader) bajara oladi."
+    message = "Bu amalni faqat ish maydonidagi Jamoa Lideri (Team Leader) yoki vazifa yaratuvchisi bajara oladi."
 
     def has_permission(self, request, view):
-        """Vazifa yaratish (create) uchun tekshiruv."""
+        """
+        Umumiy ruxsatni tekshirish. Asosan 'create' uchun ishlaydi.
+        Boshqa amallar uchun tekshiruvni has_object_permission'ga o'tkazadi.
+        """
         user = request.user
-        workspace_id = view.kwargs.get('workspace_pk') # URL'dan workspace_pk ni olishga harakat qilamiz
-        if not workspace_id and request.method == 'POST':
-             workspace_id = request.data.get('workspace')
+        if not user.is_authenticated:
+            return False
 
-        if not workspace_id:
-            return False # Agar workspace ID topilmasa, ruxsat yo'q
+        # Agar amal 'create' bo'lsa, workspace'dagi rolini tekshiramiz
+        if view.action == 'create':
+            # 'create' uchun workspace_id so'rov tanasida kelishi kerak
+            workspace_id = request.data.get('workspace')
+            if not workspace_id:
+                # Agar create so'rovida workspace ko'rsatilmagan bo'lsa, xatolik
+                self.message = "Vazifa yaratish uchun 'workspace' ID'si ko'rsatilishi shart."
+                return False
             
-        role = get_user_role_in_workspace(user, workspace_id)
-        return role == 'TEAMLEADER'
+            role = get_user_role_in_workspace(user, workspace_id)
+            return role == 'TEAMLEADER'
+
+        # 'update', 'destroy', 'retrieve' kabi boshqa amallar uchun
+        # tekshiruvni keyingi bosqichga (has_object_permission) o'tkazamiz.
+        return True
 
     def has_object_permission(self, request, view, obj):
-        """Vazifani o'zgartirish/o'chirish (update/destroy) uchun tekshiruv."""
+        """Obyekt darajasidagi ruxsatni tekshirish (update, destroy uchun)."""
         user = request.user
         role = get_user_role_in_workspace(user, obj.workspace)
-        # Faqat vazifani yaratgan team leader o'zgartira oladi
+        
+        # Faqat vazifani yaratgan team leader o'zgartira oladi yoki o'chira oladi
         return obj.created_by == user and role == 'TEAMLEADER'
-
 
 class IsAssigneeForStatusUpdate(permissions.BasePermission):
     """Faqat vazifa biriktirilgan shaxs statusni o'zgartira olishini tekshiradi."""
