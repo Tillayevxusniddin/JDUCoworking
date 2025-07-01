@@ -22,6 +22,7 @@ urlpatterns = [
     path('users/', include('apps.users.urls')),
     path('workspaces/', include('apps.workspaces.urls')),
     path('tasks/', include('apps.tasks.urls')),
+    path('reports/', include('apps.reports.urls')),
 ]
 
 if settings.DEBUG:
