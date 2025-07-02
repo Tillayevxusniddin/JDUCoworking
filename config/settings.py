@@ -220,13 +220,34 @@ SPECTACULAR_SETTINGS = {
     ## User Types:
     - **STUDENT**: Talabalar - vazifalar, hisobotlar, ish izlash
     - **STAFF**: Xodimlar - talabalar bilan ishlash
-    - **TEAMLEADER**: Jamoa rahbarlari - loyihalar boshqaruvi
     - **RECRUITER**: Ishga oluvchilar - ish e'lonlari
     - **ADMIN**: Administratorlar - to'liq huquqlar
     """,
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+     'ENUM_NAME_OVERRIDES': {
+        # users app
+        'UserTypeEnum': 'apps.users.models.User.USER_TYPE_CHOICES',
+        'StudentLevelStatusEnum': 'apps.users.models.Student.LEVEL_STATUS_CHOICES',
+        
+        # workspaces app
+        'WorkspaceTypeEnum': 'apps.workspaces.models.Workspace.WorkspaceType',
+        'WorkspaceMemberRoleEnum': 'apps.workspaces.models.WorkspaceMember.MEMBER_ROLE_CHOICES',
+
+        # tasks app
+        'TaskStatusEnum': 'apps.tasks.models.Task.STATUS_CHOICES',
+        'TaskPriorityEnum': 'apps.tasks.models.Task.PRIORITY_CHOICES',
+        
+        # reports app
+        'SalaryRecordStatusEnum': 'apps.reports.models.SalaryRecord.STATUS_CHOICES',
+        'MonthlyReportStatusEnum': 'apps.reports.models.MonthlyReport.STATUS_CHOICES',
+
+        # jobs app
+        'JobStatusEnum': 'apps.jobs.models.Job.STATUS_CHOICES',
+        'JobVacancyStatusEnum': 'apps.jobs.models.JobVacancy.STATUS_CHOICES',
+        'VacancyApplicationStatusEnum': 'apps.jobs.models.VacancyApplication.STATUS_CHOICES',
+    },
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,
         'persistAuthorization': True,

@@ -16,15 +16,12 @@ class Workspace(models.Model):
     )
     is_active = models.BooleanField(default=True, verbose_name="Faol ish maydoni")
     max_members = models.PositiveIntegerField(default=50, verbose_name="Maksimal a'zolar soni")
+    class WorkspaceType(models.TextChoices):
+        JOB_PROJECT = 'JOB_PROJECT', 'Job Project'
     workspace_type = models.CharField(
         max_length=20,
-        choices=[
-            ('GENERAL', "General"),
-            ('PROJECT', 'Project'),
-            ('STUDY', 'Study'),
-            ('MEETING', 'Meeting'),
-        ],
-        default='GENERAL',
+        choices=WorkspaceType.choices,
+        default=WorkspaceType.JOB_PROJECT,
         verbose_name="Ish maydoni turi"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan sana")
@@ -73,8 +70,13 @@ class WorkspaceMember(models.Model):
         max_length=20,
         choices=MEMBER_ROLE_CHOICES,
         verbose_name="A'zolik roli" 
-        # `default` olib tashlandi, chunki endi avtomatik belgilanadi.
     )
+    hourly_rate_override = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        verbose_name="Shaxsiy soatbay stavka (agar standartdan farq qilsa)",
+        help_text="Agar bu maydon bo'sh bo'lsa, ishning standart stavkasi ishlatiladi."
+    )
+
     joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Qo'shilgan sana")
     is_active = models.BooleanField(default=True, verbose_name="Faol a'zo")
     last_activity = models.DateTimeField(auto_now=True, verbose_name="So'nggi faoliyat")

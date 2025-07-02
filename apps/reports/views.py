@@ -21,6 +21,8 @@ class DailyReportViewSet(viewsets.ModelViewSet):
     serializer_class = DailyReportSerializer
     permission_classes = [IsStudent]
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return DailyReport.objects.none()
         return DailyReport.objects.filter(student=self.request.user)
 
 @extend_schema_view(
@@ -33,6 +35,8 @@ class MonthlyReportViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vie
     permission_classes = [permissions.IsAuthenticated]
     filterset_fields = ['student__id', 'year', 'month', 'status']
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return MonthlyReport.objects.none()
         user = self.request.user
         if user.user_type in ['STAFF', 'ADMIN']:
             return MonthlyReport.objects.select_related('student', 'salary').all()
@@ -63,6 +67,8 @@ class SalaryViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
     serializer_class = SalaryRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return SalaryRecord.objects.none()
         user = self.request.user
         if user.user_type in ['STAFF', 'ADMIN']: return SalaryRecord.objects.all().select_related('student')
         return SalaryRecord.objects.filter(student=user).select_related('student')

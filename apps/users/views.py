@@ -169,6 +169,8 @@ class StudentProfileViewSet(BaseProfileViewSet):
     queryset = Student.objects.select_related('user').all()
 
     def get_serializer_class(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return StudentProfileSerializer
         user = self.request.user
         if self.action in ['list', 'retrieve']:
             return StudentProfileSerializer
@@ -188,6 +190,8 @@ class StudentProfileViewSet(BaseProfileViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Student.objects.none()
         if self.request.user.is_authenticated:
             return self.queryset
         return self.queryset.none()
@@ -248,6 +252,8 @@ class RecruiterProfileViewSet(BaseProfileViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Recruiter.objects.none()
         if self.request.user.is_authenticated:
             return self.queryset
         return self.queryset.none()
@@ -307,6 +313,8 @@ class StaffProfileViewSet(BaseProfileViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Staff.objects.none()
         if self.request.user.is_authenticated:
             return self.queryset
         return self.queryset.none()

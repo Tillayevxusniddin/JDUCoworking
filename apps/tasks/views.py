@@ -4,6 +4,8 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.shortcuts import get_object_or_404
+
+from apps.reports.models import MonthlyReport
 from .models import Task, TaskComment
 from .serializers import (
     TaskDetailSerializer, TaskCreateSerializer, TaskUpdateByTeamLeaderSerializer,
@@ -46,6 +48,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         return TaskDetailSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Task.objects.none()
         user = self.request.user
         if not user.is_authenticated:
             return Task.objects.none()
@@ -90,6 +94,8 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
         return TaskCommentSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TaskComment.objects.none()
         return self.queryset.filter(task_id=self.kwargs.get('task_pk'))
 
     def get_permissions(self):

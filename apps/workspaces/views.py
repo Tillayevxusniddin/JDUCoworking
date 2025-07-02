@@ -1,153 +1,108 @@
 # apps/workspaces/views.py
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes, OpenApiExample, OpenApiResponse
-from rest_framework import viewsets, status
-from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Workspace, WorkspaceMember
-from .serializers import WorkspaceSerializer, WorkspaceMemberSerializer, WorkspaceMemberCreateSerializer
-from .permissions import IsAdminOrWorkspaceMemberReadOnly, IsAdminUserType
+from .serializers import WorkspaceSerializer, WorkspaceMemberSerializer, WorkspaceMemberCreateSerializer, WorkspaceMemberRateUpdateSerializer
+from .permissions import IsAdminOrWorkspaceMemberReadOnly, IsAdminUserType, IsWorkspaceMembersStaff
+from apps.users.permissions import IsAdminOrStaff
 
 @extend_schema_view(
-    list=extend_schema(
-        summary="List workspaces",
-        description="Get list of workspaces accessible to current user",
-        parameters=[
-            OpenApiParameter(
-                name='is_active',
-                type=OpenApiTypes.BOOL,
-                location=OpenApiParameter.QUERY,
-                description='Filter by active status'
-            ),
-            OpenApiParameter(
-                name='workspace_type',
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description='Filter by workspace type (GENERAL, PROJECT, STUDY, MEETING)'
-            )
-        ]
-    ),
-    retrieve=extend_schema(
-        summary="Retrieve workspace",
-        description="Get workspace details by ID"
-    ),
-    create=extend_schema(
-        summary="Create workspace",
-        description="Create new workspace. The creator is automatically added as an Admin member. (Admin only)",
-        request=WorkspaceSerializer,
-        responses={
-            201: WorkspaceSerializer,
-            403: OpenApiResponse(description="Forbidden if not admin")
-        }
-    ),
-    update=extend_schema(
-        summary="Update workspace",
-        description="Full update workspace (Admin only)",
-        request=WorkspaceSerializer,
-        responses={
-            200: WorkspaceSerializer,
-            403: OpenApiResponse(description="Forbidden if not admin")
-        }
-    ),
-    partial_update=extend_schema(
-        summary="Partial update workspace",
-        description="Partial update workspace (Admin only)",
-        request=WorkspaceSerializer,
-        responses={
-            200: WorkspaceSerializer,
-            403: OpenApiResponse(description="Forbidden if not admin")
-        }
-    ),
-    destroy=extend_schema(
-        summary="Delete workspace",
-        description="Delete workspace (Admin only)",
-        responses={
-            204: OpenApiResponse(description="No content"),
-            403: OpenApiResponse(description="Forbidden if not admin")
-        }
-    ),
+    list=extend_schema(summary="Ish maydonlari ro'yxati"),
+    retrieve=extend_schema(summary="Bitta ish maydoni ma'lumotlari"),
+    update=extend_schema(summary="[ADMIN] Ish maydonini tahrirlash"),
+    partial_update=extend_schema(summary="[ADMIN] Ish maydonini qisman tahrirlash"),
+    destroy=extend_schema(summary="[ADMIN] Ish maydonini o'chirish"),
     add_member=extend_schema(
-        summary="Add member to workspace",
-        description="Add a new member to a workspace. The role is assigned automatically based on the user's global type (e.g., STUDENT, STAFF) and status (e.g., TEAMLEAD). (Admin only)",
-        request=WorkspaceMemberCreateSerializer,
-        responses={ 201: WorkspaceMemberSerializer, }
+        summary="[ADMIN] Ish maydoniga a'zo qo'shish",
+        request=WorkspaceMemberCreateSerializer, # To'g'ri serializer ko'rsatildi
+        responses={201: WorkspaceMemberSerializer}
     ),
-    members=extend_schema(
-        summary="List workspace members",
-        description="Get a list of all members in a specific workspace."
+    members=extend_schema(summary="Ish maydoni a'zolari ro'yxati"),
+    # `remove_member` uchun dokumentatsiya quyida action ichida berilgan
+    update_member_rate=extend_schema(
+        summary="[STAFF] A'zoning shaxsiy stavkasini o'zgartirish",
+        request=WorkspaceMemberRateUpdateSerializer
     ),
-    remove_member=extend_schema(
-        summary="Remove member from workspace",
-        description="Remove a specific member from a workspace. (Admin only)"
-    )
+
 )
-class WorkspaceViewSet(viewsets.ModelViewSet):
+class WorkspaceViewSet(mixins.ListModelMixin,
+                       mixins.RetrieveModelMixin,
+                       mixins.UpdateModelMixin,
+                       mixins.DestroyModelMixin,
+                       viewsets.GenericViewSet):
+    """
+    Ish maydonlarini boshqarish uchun.
+    Yangi ish maydoni faqat 'Job' yaratilganda avtomatik hosil qilinadi.
+    """
     serializer_class = WorkspaceSerializer
     permission_classes = [IsAdminOrWorkspaceMemberReadOnly]
 
     def get_queryset(self):
-        user = self.request.user
         if getattr(self, 'swagger_fake_view', False):
             return Workspace.objects.none()
+        user = self.request.user
         if not user.is_authenticated:
             return Workspace.objects.none()
         if getattr(user, 'user_type', None) == 'ADMIN':
             return Workspace.objects.all()
         return Workspace.objects.filter(members__user=user, members__is_active=True)
-    
-    def perform_create(self, serializer):
-        """
-        Creates a new workspace and automatically adds the creator as a member with the 'ADMIN' role.
-        """
-        workspace = serializer.save(created_by=self.request.user)
-        WorkspaceMember.objects.create(
-            workspace=workspace,
-            user=self.request.user,
-            role='ADMIN'
-        )
 
-    @action(detail=True, methods=['get'], url_path='members', permission_classes=[IsAdminOrWorkspaceMemberReadOnly])
+    @action(detail=True, methods=['get'], url_path='members')
     def members(self, request, pk=None):
-        """
-        Retrieves and returns all members of a specific workspace.
-        """
-        workspace = get_object_or_404(Workspace, pk=pk)
-        self.check_object_permissions(request, workspace) # Check if user can view this workspace
+        workspace = self.get_object()
+        self.check_object_permissions(request, workspace)
         members = WorkspaceMember.objects.filter(workspace=workspace)
         serializer = WorkspaceMemberSerializer(members, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], url_path='add-member', permission_classes=[IsAdminUserType])
+    @action(detail=True, methods=['post'], url_path='add-member')
     def add_member(self, request, pk=None):
-        """
-        Adds a user to the workspace. The role is determined automatically by the serializer.
-        """
         serializer = WorkspaceMemberCreateSerializer(
             data=request.data, 
             context={'request': request, 'view': self}
         )
         serializer.is_valid(raise_exception=True)
         member = serializer.save()
-        
-        # Use the detailed serializer for the response
         output_serializer = WorkspaceMemberSerializer(member)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
+    # --- MANA SHU BLOK MUHIM ---
+    @extend_schema(
+        summary="[ADMIN] Ish maydoni a'zosini o'chirish",
+        parameters=[
+            OpenApiParameter(name='pk', type=OpenApiTypes.INT, location=OpenApiParameter.PATH, description='Workspace ID'),
+            OpenApiParameter(name='member_id', type=OpenApiTypes.INT, location=OpenApiParameter.PATH, description="A'zolik ID raqami (WorkspaceMember'ning ID'si)")
+        ]
+    )
+    # ---------------------------
     @action(detail=True, methods=['delete'], url_path='remove-member/(?P<member_id>[^/.]+)', permission_classes=[IsAdminUserType])
     def remove_member(self, request, pk=None, member_id=None):
-        """
-        Removes a member from the workspace.
-        """
         workspace = get_object_or_404(Workspace, pk=pk)
         member = get_object_or_404(WorkspaceMember, pk=member_id, workspace=workspace)
         
-        # Prevent the last admin from being removed (optional but good practice)
         if member.role == 'ADMIN' and workspace.members.filter(role='ADMIN').count() == 1:
             return Response(
-                {"error": "Cannot remove the last admin from the workspace."},
+                {"error": "Ish maydonidagi oxirgi adminni o'chirib bo'lmaydi."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
         member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(
+        detail=True, 
+        methods=['patch'], 
+        url_path='members/(?P<member_id>[^/.]+)/update-rate', 
+        permission_classes=[IsAdminOrStaff] # Staff yoki Admin o'zgartira oladi
+    )
+    def update_member_rate(self, request, pk=None, member_id=None):
+        """A'zoning shaxsiy soatbay stavkasini o'zgartirish."""
+        member = get_object_or_404(WorkspaceMember, pk=member_id, workspace_id=pk)
+        serializer = WorkspaceMemberRateUpdateSerializer(instance=member, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(WorkspaceMemberSerializer(member).data)

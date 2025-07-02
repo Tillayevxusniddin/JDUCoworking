@@ -98,3 +98,9 @@ class WorkspaceMemberCreateSerializer(serializers.ModelSerializer):
             role=role,
             **validated_data
         )
+    
+class WorkspaceMemberRateUpdateSerializer(serializers.ModelSerializer):
+    """Staff/Admin tomonidan a'zoning shaxsiy stavkasini yangilash uchun."""
+    class Meta:
+        model = WorkspaceMember
+        fields = ['hourly_rate_override']
