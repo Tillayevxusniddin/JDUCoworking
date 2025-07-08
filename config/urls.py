@@ -24,6 +24,7 @@ urlpatterns = [
     path('tasks/', include('apps.tasks.urls')),
     path('reports/', include('apps.reports.urls')),
     path('jobs/', include('apps.jobs.urls')),
+    path('meetings/', include('apps.meetings.urls')),
 ]
 
 if settings.DEBUG:

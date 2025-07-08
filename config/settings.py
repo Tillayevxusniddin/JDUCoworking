@@ -163,6 +163,8 @@ STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+GOOGLE_SERVICE_ACCOUNT_FILE = str(BASE_DIR / 'google_service_account.json')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -247,6 +249,11 @@ SPECTACULAR_SETTINGS = {
         'JobStatusEnum': 'apps.jobs.models.Job.STATUS_CHOICES',
         'JobVacancyStatusEnum': 'apps.jobs.models.JobVacancy.STATUS_CHOICES',
         'VacancyApplicationStatusEnum': 'apps.jobs.models.VacancyApplication.STATUS_CHOICES',
+        
+        # meetings app
+        'MeetingStatusEnum': 'apps.meetings.models.Meeting.Status',
+        'MeetingAudienceTypeEnum': 'apps.meetings.models.Meeting.AudienceType',
+        'MeetingAttendeeStatusEnum': 'apps.meetings.models.MeetingAttendee.Status',
     },
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,

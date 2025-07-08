@@ -23,12 +23,6 @@ from apps.users.permissions import IsAdminOrStaff
         responses={201: WorkspaceMemberSerializer}
     ),
     members=extend_schema(summary="Ish maydoni a'zolari ro'yxati"),
-    # `remove_member` uchun dokumentatsiya quyida action ichida berilgan
-    update_member_rate=extend_schema(
-        summary="[STAFF] A'zoning shaxsiy stavkasini o'zgartirish",
-        request=WorkspaceMemberRateUpdateSerializer
-    ),
-
 )
 class WorkspaceViewSet(mixins.ListModelMixin,
                        mixins.RetrieveModelMixin,
@@ -93,6 +87,15 @@ class WorkspaceViewSet(mixins.ListModelMixin,
         member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
+
+    @extend_schema(
+        summary="[STAFF/ADMIN] A'zoning shaxsiy stavkasini o'zgartirish",
+        request=WorkspaceMemberRateUpdateSerializer,
+        parameters=[
+        OpenApiParameter(name='pk', type=OpenApiTypes.INT, location=OpenApiParameter.PATH, description='Workspace ID'),
+        OpenApiParameter(name='member_id', type=OpenApiTypes.INT, location=OpenApiParameter.PATH, description="A'zolik ID raqami")
+        ]
+    )
     @action(
         detail=True, 
         methods=['patch'], 

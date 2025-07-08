@@ -1,0 +1,31 @@
+Subject: Request to Authorize a Service Account for Google Calendar API
+Hello,
+
+Could you please grant domain-wide delegation to a service account for our internal project? This will allow the application to create Google Calendar events with Google Meet links on behalf of users in our domain.
+
+Here are the required details:
+
+1. Service Account Client ID to Authorize:
+
+    118002198374635219596 <- this is dummy
+
+2. Required OAuth Scopes:
+
+https://www.googleapis.com/auth/calendar, https://www.googleapis.com/auth/calendar.events
+
+Instructions for the Administrator:
+Log in to the Google Admin Console at admin.google.com.
+
+Navigate to Security > Access and data control > API controls.
+
+Click on Manage Domain-Wide Delegation.
+
+Click Add new.
+
+In the Client ID field, paste the Client ID from above.
+
+In the OAuth Scopes field, paste the comma-separated list of scopes from above.
+
+Click Authorize.
+
+Thank you for your assistance.
