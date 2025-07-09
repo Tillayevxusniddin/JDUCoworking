@@ -9,6 +9,7 @@ from decimal import Decimal
 from apps.users.models import User
 from .models import DailyReport, SalaryRecord, MonthlyReport
 from apps.workspaces.models import Workspace, WorkspaceMember
+from apps.notifications.utils import create_notification
 
 def generate_monthly_reports_and_salaries():
     """
@@ -99,7 +100,15 @@ def generate_monthly_reports_and_salaries():
                 month=month,
             )
             monthly_report.file.save(file_name, excel_file_in_memory, save=True)
-            
             print(f"{student.get_full_name()} uchun '{workspace.name}'dagi {year}-{month} hisoboti va maoshi yaratildi.")
+
+            # ✅ YANGI QO'SHIMCHA: TALABAGA HISOBOT TAYYORLIGI HAQIDA BILDIRISHNOMA
+            create_notification(
+                recipient=student,
+                actor=None, # Tizim tomonidan
+                verb="uchun oylik hisobot generatsiya qilindi",
+                message=f"Sizning {year}-{month} oyi uchun '{workspace.name}' ish maydonidagi hisobotingiz tayyor. Iltimos, tekshirib chiqing.",
+                action_object=monthly_report
+            )
     
     print("Oylik hisobotlarni generatsiya qilish tugadi.")

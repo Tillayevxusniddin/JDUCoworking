@@ -7,7 +7,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Workspace, WorkspaceMember
-from .serializers import WorkspaceSerializer, WorkspaceMemberSerializer, WorkspaceMemberCreateSerializer, WorkspaceMemberRateUpdateSerializer
+from .serializers import (
+    WorkspaceListSerializer, WorkspaceDetailSerializer, 
+    WorkspaceMemberListSerializer, WorkspaceMemberDetailSerializer,
+    WorkspaceMemberCreateSerializer, WorkspaceMemberRateUpdateSerializer
+)
 from .permissions import IsAdminOrWorkspaceMemberReadOnly, IsAdminUserType, IsWorkspaceMembersStaff
 from apps.users.permissions import IsAdminOrStaff
 
@@ -20,7 +24,7 @@ from apps.users.permissions import IsAdminOrStaff
     add_member=extend_schema(
         summary="[ADMIN] Ish maydoniga a'zo qo'shish",
         request=WorkspaceMemberCreateSerializer, # To'g'ri serializer ko'rsatildi
-        responses={201: WorkspaceMemberSerializer}
+        responses={201: WorkspaceMemberDetailSerializer} # Yangi a'zolik ma'lumotlari qaytariladi
     ),
     members=extend_schema(summary="Ish maydoni a'zolari ro'yxati"),
 )
@@ -33,8 +37,20 @@ class WorkspaceViewSet(mixins.ListModelMixin,
     Ish maydonlarini boshqarish uchun.
     Yangi ish maydoni faqat 'Job' yaratilganda avtomatik hosil qilinadi.
     """
-    serializer_class = WorkspaceSerializer
     permission_classes = [IsAdminOrWorkspaceMemberReadOnly]
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return WorkspaceListSerializer
+        if self.action == 'retrieve':
+            return WorkspaceDetailSerializer
+        if self.action == 'members':
+            return WorkspaceMemberListSerializer
+        if self.action == 'add_member':
+            return WorkspaceMemberCreateSerializer
+        if self.action == 'update_member_rate':
+            return WorkspaceMemberRateUpdateSerializer
+        # `update`, `partial_update` uchun default
+        return WorkspaceDetailSerializer
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -51,18 +67,18 @@ class WorkspaceViewSet(mixins.ListModelMixin,
         workspace = self.get_object()
         self.check_object_permissions(request, workspace)
         members = WorkspaceMember.objects.filter(workspace=workspace)
-        serializer = WorkspaceMemberSerializer(members, many=True)
+        serializer = self.get_serializer(members, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='add-member')
     def add_member(self, request, pk=None):
-        serializer = WorkspaceMemberCreateSerializer(
+        serializer = self.get_serializer(
             data=request.data, 
             context={'request': request, 'view': self}
         )
         serializer.is_valid(raise_exception=True)
         member = serializer.save()
-        output_serializer = WorkspaceMemberSerializer(member)
+        output_serializer = WorkspaceMemberDetailSerializer(member)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     # --- MANA SHU BLOK MUHIM ---
@@ -78,7 +94,6 @@ class WorkspaceViewSet(mixins.ListModelMixin,
     def remove_member(self, request, pk=None, member_id=None):
         workspace = get_object_or_404(Workspace, pk=pk)
         member = get_object_or_404(WorkspaceMember, pk=member_id, workspace=workspace)
-        
         if member.role == 'ADMIN' and workspace.members.filter(role='ADMIN').count() == 1:
             return Response(
                 {"error": "Ish maydonidagi oxirgi adminni o'chirib bo'lmaydi."},
@@ -108,4 +123,4 @@ class WorkspaceViewSet(mixins.ListModelMixin,
         serializer = WorkspaceMemberRateUpdateSerializer(instance=member, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(WorkspaceMemberSerializer(member).data)
+        return Response(WorkspaceMemberDetailSerializer(member).data)

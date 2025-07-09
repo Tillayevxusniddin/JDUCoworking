@@ -1,114 +1,49 @@
 # apps/users/views.py
 
-from rest_framework import viewsets, status, permissions, mixins
+from rest_framework import viewsets, status, permissions, mixins, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .models import User, Student, Recruiter, Staff
 from .serializers import (
-    UserSerializer, UserCreateSerializer, UserUpdateSerializer,
-    StudentProfileSerializer, StudentProfilePersonalUpdateSerializer, StudentProfileAdminUpdateSerializer,
-    RecruiterProfileSerializer, RecruiterProfileUpdateSerializer,
-    StaffProfileSerializer, StaffProfileUpdateSerializer,
-    LoginSerializer, ChangePasswordSerializer, LogoutSerializer
+    UserDetailSerializer, UserSummarySerializer, UserCreateSerializer, UserUpdateSerializer,
+    StudentProfileListSerializer, StudentProfileDetailSerializer, 
+    StudentProfilePersonalUpdateSerializer, StudentProfileAdminUpdateSerializer,
+    RecruiterProfileListSerializer, RecruiterProfileDetailSerializer, RecruiterProfileUpdateSerializer,
+    StaffProfileListSerializer, StaffProfileDetailSerializer, StaffProfileUpdateSerializer,
+    ChangePasswordSerializer
 )
-from .permissions import (
-    IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsAdminOrStaff
-)
+from .permissions import IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsAdminOrStaff, IsProfileOwner
 
-from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
-from drf_spectacular.types import OpenApiTypes
+@extend_schema(summary="🔐 Parolni o'zgartirish", tags=["Authentication"])
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user.set_password(serializer.validated_data["new_password"])
+            user.save()
+            return Response({"message": "Parol muvaffaqiyatli o'zgartirildi."}, status=status.HTTP_200_OK)
 
 @extend_schema_view(
-    login=extend_schema(
-        summary="🔑 User login",
-        description="Foydalanuvchi tizimga kirishi va JWT tokenlarni olishi.",
-        tags=["Authentication"],
-        request=LoginSerializer,
-    ),
-    logout=extend_schema(
-        summary="🚪 User logout",
-        description="Refresh tokenni bekor qilish va tizimdan chiqish.",
-        tags=["Authentication"],
-        request=LogoutSerializer,
-    ),
-    change_password=extend_schema(
-        summary="🔐 Change password",
-        description="Foydalanuvchi parolini o'zgartirish.",
-        tags=["Authentication"],
-        request=ChangePasswordSerializer,
-    )
-)
-class AuthViewSet(viewsets.GenericViewSet):
-    """
-    🔐 Authentication endpoints: Login, Logout, Change Password.
-    Bu endpointlar uchun umumiy ruxsat berilgan (AllowAny).
-    """
-    permission_classes = [permissions.AllowAny]
-    serializer_class = LoginSerializer  # Default serializer
-
-    def get_serializer_class(self):
-        """Amalga qarab tegishli serializer'ni tanlaydi."""
-        if self.action == 'change_password':
-            return ChangePasswordSerializer
-        elif self.action == 'logout':
-            return LogoutSerializer
-        return LoginSerializer
-
-    @action(detail=False, methods=['post'])
-    def login(self, request, *args, **kwargs):
-        """Foydalanuvchi email va parol orqali tizimga kiradi."""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'user': UserSerializer(user).data,
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-        }, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def logout(self, request, *args, **kwargs):
-        """Tizimdagi foydalanuvchi refresh token yordamida tizimdan chiqadi."""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            refresh_token = serializer.validated_data["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Muvaffaqiyatli chiqildi'}, status=status.HTTP_200_OK)
-        except Exception:
-            return Response({'error': 'Noto\'g\'ri yoki muddati o\'tgan token'}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def change_password(self, request, *args, **kwargs):
-        """Tizimdagi foydalanuvchi eski va yangi parolni kiritib, parolini o'zgartiradi."""
-        serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        request.user.set_password(serializer.validated_data['new_password'])
-        request.user.save()
-        return Response({'message': 'Parol muvaffaqiyatli o\'zgartirildi'}, status=status.HTTP_200_OK)
-
-
-@extend_schema_view(
-    list=extend_schema(summary="👥 List all users (Admin only)", tags=["User Management"]),
-    retrieve=extend_schema(summary="👤 Retrieve user (Admin only)", tags=["User Management"]),
-    create=extend_schema(summary="➕ Create user (Admin only)", request=UserCreateSerializer, tags=["User Management"]),
-    update=extend_schema(summary="✏️ Update user (Admin only)", request=UserUpdateSerializer, tags=["User Management"]),
-    partial_update=extend_schema(summary="📝 Partial update user (Admin only)", request=UserUpdateSerializer, tags=["User Management"]),
-    destroy=extend_schema(summary="🗑️ Delete user (Admin only)", tags=["User Management"]),
-    me=extend_schema(summary="👤 Get current user", tags=["User Management"])
+    list=extend_schema(summary="👥 [ADMIN] Barcha foydalanuvchilar ro'yxati", tags=["User Management"]),
+    retrieve=extend_schema(summary="👤 [ADMIN] Bitta foydalanuvchini olish", tags=["User Management"]),
+    create=extend_schema(summary="➕ [ADMIN] Foydalanuvchi yaratish", tags=["User Management"]),
+    update=extend_schema(summary="✏️ [ADMIN] Foydalanuvchini tahrirlash", tags=["User Management"]),
+    partial_update=extend_schema(summary="📝 [ADMIN] Foydalanuvchini qisman tahrirlash", tags=["User Management"]),
+    destroy=extend_schema(summary="🗑️ [ADMIN] Foydalanuvchini o'chirish", tags=["User Management"]),
+    me=extend_schema(summary="👤 Joriy foydalanuvchi ma'lumotlari", tags=["User Management"])
 )
 class UserManagementViewSet(viewsets.ModelViewSet):
-    """
-    👥 User Management endpoints for Admins (Full CRUD on User model).
-    Profil avtomatik tarzda `create` yoki `partial_update`da yaratiladi/o'zgaradi.
-    """
     queryset = User.objects.all().order_by('-created_at')
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -117,219 +52,115 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at']
 
     def get_serializer_class(self):
-        """Amalga qarab tegishli serializer'ni tanlaydi."""
-        if self.action == 'create':
-            return UserCreateSerializer
-        elif self.action in ['update', 'partial_update']:
-            return UserUpdateSerializer
-        return UserSerializer
+        if self.action == 'list': return UserSummarySerializer
+        if self.action == 'create': return UserCreateSerializer
+        if self.action in ['update', 'partial_update']: return UserUpdateSerializer
+        return UserDetailSerializer
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request, *args, **kwargs):
-        """Joriy foydalanuvchining asosiy (User model) ma'lumotlarini qaytaradi."""
-        serializer = UserSerializer(request.user)
+        serializer = UserDetailSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-# --- Reusable Base ViewSet for Profiles (without 'create' action) ---
-class BaseProfileViewSet(mixins.RetrieveModelMixin,
-                         mixins.UpdateModelMixin,
-                         mixins.DestroyModelMixin,
-                         mixins.ListModelMixin,
+class BaseProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin,
+                         mixins.DestroyModelMixin, mixins.ListModelMixin,
                          viewsets.GenericViewSet):
-    """
-    Profil modellari uchun asosiy ViewSet. Bu ViewSet `create` amalini o'z ichiga olmaydi,
-    chunki profillar avtomatik yaratiladi.
-    """
     pass
 
-
 @extend_schema_view(
-    list=extend_schema(summary="🎓 List all student profiles", tags=["Student Profiles"]),
-    retrieve=extend_schema(summary="🎓 Retrieve a student profile", tags=["Student Profiles"]),
-    update=extend_schema(
-        summary="✏️ [Admin/Staff] Update student profile",
-        tags=["Student Profiles"],
-        request=StudentProfileAdminUpdateSerializer
-    ),
-    partial_update=extend_schema(
-        summary="📝 [Admin/Staff] Partial update student profile",
-        tags=["Student Profiles"],
-        request=StudentProfileAdminUpdateSerializer
-    ),
-    destroy=extend_schema(summary="🗑️ [Admin/Staff] Delete student profile", tags=["Student Profiles"]),
-    me=extend_schema(
-        summary="getMyStudentProfile 🎓 Get/Update my student profile",
-        tags=["Student Profiles"],
-        request=StudentProfilePersonalUpdateSerializer
-    )
+    list=extend_schema(summary="🎓 Barcha talaba profillari", tags=["Student Profiles"]),
+    retrieve=extend_schema(summary="🎓 Bitta talaba profili", tags=["Student Profiles"]),
+    update=extend_schema(summary="✏️ [ADMIN/STAFF] Talaba profilini tahrirlash", tags=["Student Profiles"]),
+    me=extend_schema(summary="🎓 Mening profilim (Talaba)", tags=["Student Profiles"])
 )
 class StudentProfileViewSet(BaseProfileViewSet):
-    """Talaba profillarini boshqarish uchun endpointlar."""
     queryset = Student.objects.select_related('user').all()
-
+    
     def get_serializer_class(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return StudentProfileSerializer
+        if getattr(self, 'swagger_fake_view', False): return StudentProfileListSerializer
         user = self.request.user
-        if self.action in ['list', 'retrieve']:
-            return StudentProfileSerializer
-        if self.action == 'me' and user.user_type == 'STUDENT':
-             return StudentProfilePersonalUpdateSerializer
-        if user.user_type in ['ADMIN', 'STAFF']:
-            return StudentProfileAdminUpdateSerializer
-        return StudentProfileSerializer
+        if self.action == 'list': return StudentProfileListSerializer
+        if self.action == 'me': return StudentProfilePersonalUpdateSerializer
+        if user.user_type in ['ADMIN', 'STAFF']: return StudentProfileAdminUpdateSerializer
+        return StudentProfileDetailSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            self.permission_classes = [permissions.IsAuthenticated]
-        elif self.action == 'me':
-            self.permission_classes = [permissions.IsAuthenticated, IsStudentUser]
-        else: # update, partial_update, destroy
-            self.permission_classes = [permissions.IsAuthenticated, IsAdminOrStaff]
+        if self.action == 'me': self.permission_classes = [IsStudentUser]
+        elif self.action in ['update', 'partial_update', 'destroy']: self.permission_classes = [IsAdminOrStaff]
+        else: self.permission_classes = [permissions.IsAuthenticated]
         return super().get_permissions()
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return Student.objects.none()
-        if self.request.user.is_authenticated:
-            return self.queryset
-        return self.queryset.none()
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request, *args, **kwargs):
-        """Talabaga o'z profilini olish va tahrirlash imkonini beradi."""
-        try:
-            instance = request.user.student_profile
-        except Student.DoesNotExist:
-            return Response({'error': 'Student profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
+        instance = self.request.user.student_profile
         if request.method == 'GET':
-            serializer = StudentProfileSerializer(instance)
+            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
+            serializer = StudentProfileDetailSerializer(instance)
             return Response(serializer.data)
-        
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(StudentProfileSerializer(instance).data)
-
+        return Response(StudentProfileDetailSerializer(instance).data)
 
 @extend_schema_view(
-    list=extend_schema(summary="💼 List all recruiter profiles", tags=["Recruiter Profiles"]),
-    retrieve=extend_schema(summary="💼 Retrieve a recruiter profile", tags=["Recruiter Profiles"]),
-    update=extend_schema(
-        summary="✏️ [Admin] Update recruiter profile",
-        tags=["Recruiter Profiles"],
-        request=RecruiterProfileUpdateSerializer
-    ),
-    partial_update=extend_schema(
-        summary="📝 [Admin] Partial update recruiter profile",
-        tags=["Recruiter Profiles"],
-        request=RecruiterProfileUpdateSerializer
-    ),
-    destroy=extend_schema(summary="🗑️ [Admin] Delete recruiter profile", tags=["Recruiter Profiles"]),
-    me=extend_schema(
-        summary="getMyRecruiterProfile 💼 Get/Update my recruiter profile",
-        tags=["Recruiter Profiles"],
-        request=RecruiterProfileUpdateSerializer
-    )
+    list=extend_schema(summary="💼 Barcha recruiter profillari", tags=["Recruiter Profiles"]),
+    retrieve=extend_schema(summary="💼 Bitta recruiter profili", tags=["Recruiter Profiles"]),
+    me=extend_schema(summary="💼 Mening profilim (Recruiter)", tags=["Recruiter Profiles"])
 )
 class RecruiterProfileViewSet(BaseProfileViewSet):
-    """Recruiter profillarini boshqarish uchun endpointlar."""
     queryset = Recruiter.objects.select_related('user').all()
 
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            return RecruiterProfileSerializer
-        return RecruiterProfileUpdateSerializer
+        if self.action == 'list': return RecruiterProfileListSerializer
+        if self.action == 'me': return RecruiterProfileUpdateSerializer
+        return RecruiterProfileDetailSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            self.permission_classes = [permissions.IsAuthenticated]
-        elif self.action == 'me':
-            self.permission_classes = [permissions.IsAuthenticated, IsRecruiterUser]
-        else: # update, partial_update, destroy
-            self.permission_classes = [IsAdminUser]
+        if self.action == 'me': self.permission_classes = [IsRecruiterUser]
+        elif self.action in ['update', 'partial_update', 'destroy']: self.permission_classes = [IsAdminUser]
+        else: self.permission_classes = [permissions.IsAuthenticated]
         return super().get_permissions()
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return Recruiter.objects.none()
-        if self.request.user.is_authenticated:
-            return self.queryset
-        return self.queryset.none()
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request, *args, **kwargs):
-        """Recruiter'ga o'z profilini olish va tahrirlash imkonini beradi."""
-        try:
-            instance = request.user.recruiter_profile
-        except Recruiter.DoesNotExist:
-            return Response({'error': 'Recruiter profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
+        instance = request.user.recruiter_profile
         if request.method == 'GET':
-            return Response(RecruiterProfileSerializer(instance).data)
-        
+            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
+            serializer = RecruiterProfileDetailSerializer(instance)
+            return Response(serializer.data)
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(RecruiterProfileSerializer(instance).data)
+        return Response(RecruiterProfileDetailSerializer(instance).data)
 
 
 @extend_schema_view(
-    list=extend_schema(summary="👔 List all staff profiles", tags=["Staff Profiles"]),
-    retrieve=extend_schema(summary="👔 Retrieve a staff profile", tags=["Staff Profiles"]),
-    update=extend_schema(
-        summary="✏️ [Admin] Update staff profile",
-        tags=["Staff Profiles"],
-        request=StaffProfileUpdateSerializer
-    ),
-    partial_update=extend_schema(
-        summary="📝 [Admin] Partial update staff profile",
-        tags=["Staff Profiles"],
-        request=StaffProfileUpdateSerializer
-    ),
-    destroy=extend_schema(summary="🗑️ [Admin] Delete staff profile", tags=["Staff Profiles"]),
-    me=extend_schema(
-        summary="getMyStaffProfile 👔 Get/Update my staff profile",
-        tags=["Staff Profiles"],
-        request=StaffProfileUpdateSerializer
-    )
+    list=extend_schema(summary="👔 Barcha xodim profillari", tags=["Staff Profiles"]),
+    retrieve=extend_schema(summary="👔 Bitta xodim profili", tags=["Staff Profiles"]),
+    me=extend_schema(summary="👔 Mening profilim (Staff)", tags=["Staff Profiles"])
 )
 class StaffProfileViewSet(BaseProfileViewSet):
-    """Xodim (staff) profillarini boshqarish uchun endpointlar."""
     queryset = Staff.objects.select_related('user').all()
 
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            return StaffProfileSerializer
-        return StaffProfileUpdateSerializer
+        if self.action == 'list': return StaffProfileListSerializer
+        if self.action == 'me': return StaffProfileUpdateSerializer
+        return StaffProfileDetailSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            self.permission_classes = [permissions.IsAuthenticated]
-        elif self.action == 'me':
-            self.permission_classes = [permissions.IsAuthenticated, IsStaffUser]
-        else: # update, partial_update, destroy
-            self.permission_classes = [IsAdminUser]
+        if self.action == 'me': self.permission_classes = [IsStaffUser]
+        elif self.action in ['update', 'partial_update', 'destroy']: self.permission_classes = [IsAdminUser]
+        else: self.permission_classes = [permissions.IsAuthenticated]
         return super().get_permissions()
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return Staff.objects.none()
-        if self.request.user.is_authenticated:
-            return self.queryset
-        return self.queryset.none()
 
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request, *args, **kwargs):
-        """Xodimga (staff) o'z profilini olish va tahrirlash imkonini beradi."""
-        try:
-            instance = request.user.staff_profile
-        except Staff.DoesNotExist:
-            return Response({'error': 'Xodim profili topilmadi'}, status=status.HTTP_404_NOT_FOUND)
+        instance = request.user.staff_profile
         if request.method == 'GET':
-            return Response(StaffProfileSerializer(instance).data)
-        
+            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
+            serializer = StaffProfileDetailSerializer(instance)
+            return Response(serializer.data)
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(StaffProfileSerializer(instance).data)
+        return Response(StaffProfileDetailSerializer(instance).data)

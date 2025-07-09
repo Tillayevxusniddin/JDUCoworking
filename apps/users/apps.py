@@ -10,5 +10,5 @@ class UsersConfig(AppConfig):
         """
         Ilova tayyor bo'lganda signallarni import qilish.
         """
-        import apps.users.signals # <-- SHU QATORNI QO'SHING
+        import apps.users.signals 
     

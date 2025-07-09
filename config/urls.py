@@ -25,6 +25,7 @@ urlpatterns = [
     path('reports/', include('apps.reports.urls')),
     path('jobs/', include('apps.jobs.urls')),
     path('meetings/', include('apps.meetings.urls')),
+    path('notifications/', include('apps.notifications.urls')),
 ]
 
 if settings.DEBUG:

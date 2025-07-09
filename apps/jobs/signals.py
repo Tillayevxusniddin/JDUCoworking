@@ -5,6 +5,8 @@ from django.dispatch import receiver
 from .models import Job, VacancyApplication
 from apps.workspaces.models import Workspace, WorkspaceMember
 from django.db import transaction
+from apps.notifications.utils import create_notification
+
 
 # 1-Signal: Job yaratilganda Workspace yaratish
 @receiver(post_save, sender=Job)
@@ -30,38 +32,39 @@ def create_workspace_for_job(sender, instance, created, **kwargs):
 @receiver(post_save, sender=VacancyApplication)
 @transaction.atomic
 def handle_accepted_application(sender, instance, **kwargs):
-    """
-    Ariza statusi 'ACCEPTED'ga o'zgarganda quyidagi amallarni bajaradi:
-    1. Talabani tegishli workspace'ga a'zo qilib qo'shadi.
-    2. Vakansiyadagi bo'sh o'rinlar sonini kamaytiradi.
-    3. Agar bo'sh o'rinlar qolmasa, vakansiyani yopadi.
-    """
-    # Faqat mavjud ariza 'ACCEPTED' statusini olganda ishlaydi
+    # Bu signal faqat 'ACCEPTED' statusi uchun ishlashi kerak
     if instance.status == 'ACCEPTED':
         vacancy = instance.vacancy
         student = instance.applicant
         workspace = vacancy.job.workspace
 
-        # 1. Talabani workspace'ga a'zo qilib qo'shish
-        # `get_or_create` metodi talaba allaqachon a'zo bo'lsa, uni qayta qo'shmaydi.
-        # `created` o'zgaruvchisi talaba yangi qo'shilganini bildiradi.
         member, created_new_member = WorkspaceMember.objects.get_or_create(
             workspace=workspace,
             user=student,
             defaults={'role': 'STUDENT'}
         )
-
-        # Agar haqiqatan ham yangi a'zo qo'shilgan bo'lsa, vakansiyani yangilaymiz
+        
+        # Faqatgina haqiqatdan ham YENGI a'zo qo'shilgan bo'lsa, qolgan amallarni bajaramiz.
+        # Bu ariza qayta-qayta 'ACCEPTED' qilinishining oldini oladi.
         if created_new_member:
             print(f"SUCCESS: {student.get_full_name()} '{workspace.name}'ga qo'shildi.")
 
-            # 2. Vakansiyadagi bo'sh o'rinlarni kamaytirish
+            # ✅ TUZATILGAN QISM: `actor`ni `view`dan kelgan foydalanuvchi bilan almashtiramiz
+            # `reviewed_by` degan atribut modelda yo'q, uni `view`da qo'lda qo'shib qo'yamiz
+            reviewer = getattr(instance, '_reviewed_by_user', vacancy.created_by)
+            
+            create_notification(
+                recipient=student,
+                actor=reviewer,
+                verb=f"arizangizni tasdiqladi",
+                message=f"Tabriklaymiz! Sizning '{vacancy.title}' vakansiyasiga arizangiz qabul qilindi va siz '{workspace.name}' ish maydoniga qo'shildingiz.",
+                action_object=instance,
+                target=workspace
+            )
+
             if vacancy.slots_available > 0:
                 vacancy.slots_available -= 1
-                
-                # 3. Agar o'rinlar tugagan bo'lsa, vakansiyani yopish
                 if vacancy.slots_available == 0:
                     vacancy.status = 'CLOSED'
                     print(f"INFO: Vakansiya '{vacancy.title}' to'lganligi uchun yopildi.")
-
-                vacancy.save()
+                vacancy.save(update_fields=['slots_available', 'status'])

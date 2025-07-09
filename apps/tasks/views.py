@@ -6,9 +6,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.shortcuts import get_object_or_404
 
 from apps.reports.models import MonthlyReport
+from apps.notifications.utils import create_notification
 from .models import Task, TaskComment
 from .serializers import (
-    TaskDetailSerializer, TaskCreateSerializer, TaskUpdateByTeamLeaderSerializer,
+    # ✅ YANGILANGAN IMPORTLAR
+    TaskListSerializer, TaskDetailSerializer, 
+    TaskCreateSerializer, TaskUpdateByTeamLeaderSerializer,
     TaskUpdateByAssigneeSerializer, TaskCommentSerializer, TaskCommentCreateSerializer
 )
 from .permissions import (
@@ -31,20 +34,21 @@ class TaskViewSet(viewsets.ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return TaskDetailSerializer
             
+        if self.action == 'list':
+            return TaskListSerializer
+                
         if self.action == 'create':
             return TaskCreateSerializer
         
         if self.action in ['update', 'partial_update']:
             task = self.get_object()
             user = self.request.user
-            # Agar so'rov yuborayotgan odam vazifani yaratgan Team Leader bo'lsa
             if task.created_by == user:
                 return TaskUpdateByTeamLeaderSerializer
-            # Agar so'rov yuborayotgan odam vazifaga biriktirilgan bo'lsa
             if task.assigned_to == user:
                 return TaskUpdateByAssigneeSerializer
         
-        # Barcha qolgan holatlar uchun (GET, yoki ruxsati bo'lmaganlar uchun)
+        # Barcha qolgan holatlar uchun (masalan, `retrieve`) to'liq ma'lumot beruvchi serializer
         return TaskDetailSerializer
 
     def get_queryset(self):
@@ -76,6 +80,21 @@ class TaskViewSet(viewsets.ModelViewSet):
             # Ish maydoni a'zosi bo'lishi kifoya
             self.permission_classes = [permissions.IsAuthenticated, IsWorkspaceMember]
         return super().get_permissions()
+
+    def perform_create(self, serializer):
+        """Yangi vazifa yaratilganda uning yaratuvchisini belgilash va bildirishnoma yuborish."""
+        task = serializer.save(created_by=self.request.user)
+        # Bildirishnoma yaratish
+        create_notification(
+            recipient=task.assigned_to,
+            actor=task.created_by,
+            verb="sizga yangi vazifa biriktirdi",
+            message=f"'{task.created_by.get_full_name()}' sizga '{task.title}' nomli yangi vazifa biriktirdi.",
+            action_object=task
+        )
+
+
+
 
 @extend_schema_view(
     create=extend_schema(summary="💬 Vazifaga izoh qo'shish", tags=['Task Comments']),
@@ -116,4 +135,24 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         task = get_object_or_404(Task, pk=self.kwargs.get('task_pk'))
-        serializer.save(user=self.request.user, task=task)     
+        commenter = self.request.user
+        comment = serializer.save(user=commenter, task=task)
+        
+        # ✅ BILDIRISHNOMA MANTIG'I
+        # Vazifa yaratuvchisiga bildirishnoma yuborish
+        create_notification(
+            recipient=task.created_by,
+            actor=commenter,
+            verb="sizning vazifangizga izoh yozdi",
+            message=f"'{commenter.get_full_name()}' siz yaratgan '{task.title}' vazifasiga izoh qoldirdi.",
+            action_object=comment
+        )
+        
+        # Vazifa bajaruvchisiga bildirishnoma yuborish
+        create_notification(
+            recipient=task.assigned_to,
+            actor=commenter,
+            verb="sizga biriktirilgan vazifaga izoh yozdi",
+            message=f"'{commenter.get_full_name()}' sizga biriktirilgan '{task.title}' vazifasiga izoh qoldirdi.",
+            action_object=comment
+        )
