@@ -1,0 +1,30 @@
+# .dockerignore
+
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# IDE
+.idea/
+.vscode/
+
+# Environment files
+.env
+
+# Media files (if large and not needed in image)
+media/
+google_service_account.json
