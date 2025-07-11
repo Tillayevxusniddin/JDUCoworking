@@ -1,4 +1,5 @@
-JDU Coworking System API
+# JDU Coworking System API
+
 <p align="center">
   <img src="https://i.imgur.com/your-logo-image-url.png" alt="Project Logo" width="150"/>
 </p>
@@ -22,149 +23,146 @@ JDU Coworking System API
   </a>
 </p>
 
-✨ Key Features
-👥 User Management: Multi-role system (STUDENT, STAFF, TEAMLEADER, RECRUITER, ADMIN) with dedicated user profiles.
+---
 
-🔐 Secure Authentication: Robust authentication using Simple-JWT with access and refresh tokens.
+## ✨ Key Features
 
-🏢 Workspace Collaboration: Dedicated workspaces for projects with a complete membership management system.
+* **👥 User Management:** Multi-role system (`STUDENT`, `STAFF`, `TEAMLEADER`, `RECRUITER`, `ADMIN`) with dedicated user profiles.
+* **🔐 Secure Authentication:** Robust authentication using `Simple-JWT` with `access` and `refresh` tokens.
+* **🏢 Workspace Collaboration:** Dedicated workspaces for projects with a complete membership management system.
+* **💼 Jobs & Vacancies:** A full-cycle system for creating projects (`Jobs`), posting vacancies, and handling student applications.
+* **📋 Task Management:** Create, assign, and comment on tasks within project workspaces.
+* **📊 Automated Reporting & Payroll:** Daily reports, automatic monthly report generation (in Excel), and salary calculation.
+* **📹 Meeting Integration:** Seamless integration with `Google Calendar API` to schedule meetings and invite attendees.
+* **🔔 Notification System:** Real-time notifications for all important events within the system.
+* **📄 API Documentation:** Auto-generated, interactive API documentation using `drf-spectacular` (Swagger UI).
 
-💼 Jobs & Vacancies: A full-cycle system for creating projects (Jobs), posting vacancies, and handling student applications.
+---
 
-📋 Task Management: Create, assign, and comment on tasks within project workspaces.
+## 🛠️ Tech Stack
 
-📊 Automated Reporting & Payroll: Daily reports, automatic monthly report generation (in Excel), and salary calculation.
+| Component | Technology |
+| :--- | :--- |
+| **Backend** | Python, Django, Django Rest Framework |
+| **Database** | PostgreSQL |
+| **Authentication** | JWT (Django Rest Framework Simple JWT) |
+| **Scheduled Tasks** | APScheduler |
+| **Containerization** | Docker, Docker Compose |
+| **API Documentation** | drf-spectacular (Swagger UI) |
 
-📹 Meeting Integration: Seamless integration with Google Calendar API to schedule meetings and invite attendees.
+---
 
-🔔 Notification System: Real-time notifications for all important events within the system.
+## 🚀 Getting Started
 
-📄 API Documentation: Auto-generated, interactive API documentation using drf-spectacular (Swagger UI).
+You can get the project up and running in two ways. The **Docker** method is highly recommended for a quick and consistent setup.
 
-🛠️ Tech Stack
-Component
+### 1. Running with Docker (Recommended)
 
-Technology
-
-Backend
-
-Python, Django, Django Rest Framework
-
-Database
-
-PostgreSQL
-
-Authentication
-
-JWT (Django Rest Framework Simple JWT)
-
-Scheduled Tasks
-
-APScheduler
-
-Containerization
-
-Docker, Docker Compose
-
-API Documentation
-
-drf-spectacular (Swagger UI)
-
-🚀 Getting Started
-You can get the project up and running in two ways: using Docker (recommended) for a quick and consistent setup, or a manual local setup.
-
-1. Running with Docker (Recommended)
 This is the easiest and most reliable way to start the project.
 
-Prerequisites:
-Docker installed on your machine.
+#### **Prerequisites**
+> * [Docker](https://www.docker.com/products/docker-desktop/) must be installed on your machine.
 
-Step-by-Step Guide:
-Clone the repository:
+#### **Step-by-Step Guide**
 
-git clone https://github.com/Tillayevxusniddin/JDUCoworking.git
-cd JDUCoworking
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/Tillayevxusniddin/JDUCoworking.git](https://github.com/Tillayevxusniddin/JDUCoworking.git)
+    cd JDUCoworking
+    ```
 
-Create the environment file:
-Copy the example environment file .env.example to a new file named .env and fill in your configuration details.
+2.  **Create the environment file:**
+    Copy the example environment file `.env.example` to a new file named `.env`.
+    ```bash
+    cp .env.example .env
+    ```
+    > **Important:** Open the `.env` file and update the variables, especially `SECRET_KEY` and `DB_PASSWORD`.
 
-cp .env.example .env
+3.  **Build and Run the Containers:**
+    This command will build the Docker images and start the Django (`web`) and PostgreSQL (`db`) services.
+    ```bash
+    docker-compose up --build
+    ```
+    > Wait for the logs to indicate that the database is ready and the Django server has started.
 
-Now, open the .env file and update the variables, especially SECRET_KEY and DB_PASSWORD.
+4.  **Set up the Database (First Time Only):**
+    > Open a **new terminal window** (leave the previous one running).
 
-Build and Run the Containers:
-This single command will build the Docker images and start the Django (web) and PostgreSQL (db) services.
+    * Run the database migrations:
+        ```bash
+        docker-compose exec web python manage.py migrate
+        ```
+    * Create a superuser to access the admin panel:
+        ```bash
+        docker-compose exec web python manage.py createsuperuser
+        ```
 
-docker-compose up --build
+5.  **You're all set!**
+    The application is now running.
+    * **API Server:** [http://localhost:8000/](http://localhost:8000/)
+    * **API Documentation (Swagger UI):** [http://localhost:8000/docs/](http://localhost:8000/docs/)
 
-Wait for the logs to indicate that the database is ready and the Django server has started.
+---
 
-Set up the Database (First Time Only):
+### 2. Manual Local Setup (Without Docker)
 
-Open a new terminal window (leave the previous one running).
+#### **Prerequisites**
+> * Python 3.10+
+> * PostgreSQL
 
-Run the database migrations:
+#### **Step-by-Step Guide**
 
-docker-compose exec web python manage.py migrate
+1.  **Clone the repository and create a virtual environment:**
+    ```bash
+    git clone [https://github.com/Tillayevxusniddin/JDUCoworking.git](https://github.com/Tillayevxusniddin/JDUCoworking.git)
+    cd JDUCoworking
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
 
-Create a superuser to access the admin panel:
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-docker-compose exec web python manage.py createsuperuser
+3.  **Set up the database:**
+    Create a new PostgreSQL database manually (e.g., `coworking`).
 
-That's it! The application is now running.
+4.  **Configure environment variables:**
+    Create a `.env` file. For a local setup, `DB_HOST` must be `localhost`.
+    ```dotenv
+    # .env
+    SECRET_KEY=your-strong-secret-key
+    DEBUG=True
+    DB_NAME=coworking
+    DB_USER=your_postgres_user
+    DB_PASSWORD=your_postgres_password
+    DB_HOST=localhost
+    DB_PORT=5432
+    ```
 
-API Server: http://localhost:8000/
+5.  **Run migrations and create a superuser:**
+    ```bash
+    python manage.py migrate
+    python manage.py createsuperuser
+    ```
 
-API Documentation (Swagger UI): http://localhost:8000/docs/
+6.  **Start the development server:**
+    ```bash
+    python manage.py runserver
+    ```
+    The application will be available at `http://localhost:8000/`.
 
-2. Manual Local Setup (Without Docker)
-Prerequisites:
-Python 3.10+
+---
 
-PostgreSQL
+## 📄 License
 
-Step-by-Step Guide:
-Clone the repository and create a virtual environment:
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/Tillayevxusniddin/JDUCoworking/blob/main/LICENSE) file for details.
 
-git clone https://github.com/Tillayevxusniddin/JDUCoworking.git
-cd JDUCoworking
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+---
 
-Install dependencies:
+## 📬 Contact
 
-pip install -r requirements.txt
+Xusniddin Tillayev - [tillayevx1@gmail.com](mailto:tillayevx1@gmail.com)
 
-Set up the database:
-Create a new PostgreSQL database (e.g., coworking).
-
-Configure environment variables:
-Create a .env file and set the variables. For a local setup, DB_HOST should be localhost.
-
-# .env
-SECRET_KEY=your-strong-secret-key
-DEBUG=True
-DB_NAME=coworking
-DB_USER=your_postgres_user
-DB_PASSWORD=your_postgres_password
-DB_HOST=localhost
-DB_PORT=5432
-
-Run migrations and create a superuser:
-
-python manage.py migrate
-python manage.py createsuperuser
-
-Start the development server:
-
-python manage.py runserver
-
-The application will be available at http://localhost:8000/.
-
-📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-📬 Contact
-Xusniddin Tillayev - tillayevx1@gmail.com
-
-Project Link: https://github.com/Tillayevxusniddin/JDUCoworking
+Project Link: [https://github.com/Tillayevxusniddin/JDUCoworking](https://github.com/Tillayevxusniddin/JDUCoworking)
