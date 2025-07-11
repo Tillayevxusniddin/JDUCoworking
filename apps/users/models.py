@@ -29,11 +29,10 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('user_type', 'ADMIN')
 
         if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser uchun is_staff=True bo‘lishi kerak.')
+            raise ValueError('For staff users, is_staff=True must be set.')
         if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser uchun is_superuser=True bo‘lishi kerak.')
+            raise ValueError('For superusers, is_superuser=True must be set.')
 
-            # Username ni email bilan bir xil qilib qo‘yamiz
         if 'username' not in extra_fields:
             extra_fields['username'] = email
         return self.create_user(email, password, **extra_fields)
@@ -89,9 +88,9 @@ class Student(models.Model):
     student_id = models.CharField(
         max_length=20,
         unique=True,
-        blank=True,  # <-- Bo'sh qoldirishga ruxsat berish
-        null=True,  # <-- Null qiymatga ruxsat berish
-        default=None  # <-- Default qiymat
+        blank=True, 
+        null=True,  
+        default=None 
     )
     it_skills = models.JSONField(default=list, blank=True)
     semester = models.IntegerField(choices=SEMESTER_CHOICES, blank=True, null=True)

@@ -21,34 +21,27 @@ from apps.notifications.utils import create_notification
 
 
 class MeetingViewSet(viewsets.ModelViewSet):
-    """
-    Uchrashuvlarni (Meeting) boshqarish uchun to'liq ViewSet.
-    """
     queryset = Meeting.objects.all().prefetch_related('attendees__user', 'workspace', 'organizer')
     
     def get_serializer_class(self):
-        """Amalga qarab mos serializer'ni tanlaydi."""
         if self.action == 'list':
             return MeetingListSerializer
         if self.action in ['create', 'update', 'partial_update']:
             return MeetingCreateSerializer
         if self.action == 'set_meet_link':
             return MeetingLinkUpdateSerializer
-        # `retrieve` va boshqa holatlar uchun to'liq ma'lumot beruvchi serializer
         return MeetingDetailSerializer 
     
     def get_permissions(self):
-        """Amalga qarab mos ruxsatnomani tanlaydi."""
         if self.action in ['update', 'partial_update', 'destroy', 'set_meet_link']:
             self.permission_classes = [IsMeetingOrganizerOrAdmin]
         elif self.action in ['list', 'retrieve']:
             self.permission_classes = [permissions.IsAuthenticated]
-        else: # create
+        else:
             self.permission_classes = [IsAdminOrStaff]
         return super().get_permissions()
 
     def get_queryset(self):
-        """Foydalanuvchiga tegishli uchrashuvlarni qaytaradi."""
         user = self.request.user
         if user.user_type == 'ADMIN':
             return self.queryset
@@ -61,12 +54,7 @@ class MeetingViewSet(viewsets.ModelViewSet):
         ).distinct()
 
     def perform_create(self, serializer):
-        """
-        Yangi uchrashuv yaratilganda barcha kerakli amallarni bajaradi.
-        """
         meeting = serializer.save(organizer=self.request.user)
-
-        # 1. Qatnashuvchilarni aniqlash va bazaga yozish
         invited_users_data = serializer.validated_data.get('invited_users', [])
         attendee_users_qs = User.objects.none()
 
@@ -89,7 +77,6 @@ class MeetingViewSet(viewsets.ModelViewSet):
             if attendees_to_create:
                 MeetingAttendee.objects.bulk_create(attendees_to_create, ignore_conflicts=True)
 
-        # 2. Google Calendar'da tadbir yaratish
         if not meeting.google_event_id and final_attendee_emails:
             link, event_id = create_google_meet_event(
                 meeting.title, meeting.description, meeting.start_time,
@@ -100,47 +87,41 @@ class MeetingViewSet(viewsets.ModelViewSet):
                 meeting.google_event_id = event_id
                 meeting.save(update_fields=['meeting_link', 'google_event_id'])
 
-        # 3. Barcha qatnashuvchilarga bildirishnoma yuborish
         for attendee in meeting.attendees.all():
             create_notification(
                 recipient=attendee.user,
                 actor=meeting.organizer,
-                verb="sizni uchrashuvga taklif qildi",
-                message=f"Siz '{meeting.title}' nomli yangi uchrashuvga taklif qilindingiz.",
+                verb="You have been invited to a meeting",
+                message=f"You have been invited to a new meeting titled '{meeting.title}'.",
                 action_object=meeting
             )
 
     @extend_schema(
-        summary="[Organizer/ADMIN] Uchrashuvga Google Meet havolasini qo'shish",
+        summary="[Organizer/ADMIN] Set Google Meet Link",
         request=MeetingLinkUpdateSerializer,
         responses={200: MeetingDetailSerializer}
     )
     @action(detail=True, methods=['patch'], url_path='set-link')
     def set_meet_link(self, request, pk=None):
         """
-        Mavjud uchrashuvga Google Meet havolasini qo'shish/yangilash.
+        Set or update the Google Meet link for a meeting.
         """
         meeting = self.get_object()
-        self.check_object_permissions(request, meeting) # Ruxsatni tekshirish
+        self.check_object_permissions(request, meeting) 
 
         serializer = self.get_serializer(instance=meeting, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         
-        # Javobni to'liq ma'lumot beruvchi serializer bilan qaytaramiz
         return Response(MeetingDetailSerializer(meeting).data)
 
 class MeetingAttendeeViewSet(mixins.ListModelMixin,
                            mixins.RetrieveModelMixin,
                            mixins.UpdateModelMixin,
                            viewsets.GenericViewSet):
-    """
-    Uchrashuv qatnashchilari (taklifnomalar) ustida amallar.
-    """
     queryset = MeetingAttendee.objects.all()
 
     def get_serializer_class(self):
-        """Amalga qarab mos serializer'ni tanlaydi."""
         if self.action == 'list':
             return MeetingAttendeeListSerializer
         if self.action in ['update', 'partial_update']:
@@ -148,25 +129,19 @@ class MeetingAttendeeViewSet(mixins.ListModelMixin,
         return MeetingAttendeeDetailSerializer
 
     def get_queryset(self):
-        """Foydalanuvchiga tegishli taklifnomalarni qaytaradi."""
         user = self.request.user
         if user.user_type in ['ADMIN', 'STAFF']:
             return MeetingAttendee.objects.all().select_related('user', 'meeting')
         return MeetingAttendee.objects.filter(user=user).select_related('user', 'meeting')
     
     def get_permissions(self):
-        """Amalga qarab mos ruxsatnomani tanlaydi."""
         if self.action in ['update', 'partial_update']:
             self.permission_classes = [IsAttendee]
-        else: # list, retrieve
+        else:
             self.permission_classes = [permissions.IsAuthenticated]
         return super().get_permissions()
 
     def perform_update(self, serializer):
-        """
-        Qatnashuvchi statusni yangilaganda uni bazaga saqlaydi va
-        uchrashuv tashkilotchisiga bildirishnoma yuboradi.
-        """
         old_status = serializer.instance.status
         attendee = serializer.save(responded_at=timezone.now())
         new_status = attendee.status
@@ -177,12 +152,12 @@ class MeetingAttendeeViewSet(mixins.ListModelMixin,
             responder = attendee.user
             
             if organizer != responder:
-                status_text = "qabul qildi" if new_status == 'ACCEPTED' else "rad etdi"
-                
+                status_text = "accepted" if new_status == 'ACCEPTED' else "declined"
+
                 create_notification(
                     recipient=organizer,
                     actor=responder,
-                    verb=f"uchrashuvga taklifingizni {status_text}",
-                    message=f"'{responder.get_full_name()}' siz yaratgan '{meeting.title}' uchrashuviga yuborilgan taklifni {status_text}.",
+                    verb=f"You have {status_text} the meeting invitation",
+                    message=f"'{responder.get_full_name()}' has {status_text} the invitation to the meeting titled '{meeting.title}'.",
                     action_object=meeting
                 )

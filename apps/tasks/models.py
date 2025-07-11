@@ -19,14 +19,12 @@ class Task(models.Model):
         ('URGENT', 'Urgent')
     )
 
-    # --- Y A N G I   M A Y D O N ---
     workspace = models.ForeignKey(
         Workspace, 
         on_delete=models.CASCADE, 
         related_name='tasks', 
-        verbose_name="Ish maydoni"
+        verbose_name="Workspace"
     )
-    # -----------------------------
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)

@@ -3,7 +3,6 @@ from rest_framework_nested import routers
 from .views import TaskViewSet, TaskCommentViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
-# router = routers.DefaultRouter()
 router.register(r'tasks', TaskViewSet, basename='tasks')
 
 tasks_router = routers.NestedDefaultRouter(router, r'tasks', lookup='task')

@@ -11,16 +11,16 @@ from .serializers import NotificationListSerializer, NotificationDetailSerialize
 
 @extend_schema_view(
     list=extend_schema(
-        summary="🔔 Mening bildirishnomalarim ro'yxati",
-        responses=NotificationListSerializer(many=True) # Javob qanday bo'lishini ko'rsatamiz
+        summary="🔔 My notifications list",
+        responses=NotificationListSerializer(many=True) 
     ),
     retrieve=extend_schema(
-        summary="🔔 Bitta bildirishnomani ko'rish",
-        responses=NotificationDetailSerializer # Javob qanday bo'lishini ko'rsatamiz
+        summary="🔔 View a single notification",
+        responses=NotificationDetailSerializer
     ),
-    mark_as_read=extend_schema(summary="✔️ Bildirishnomani 'o'qilgan' deb belgilash"),
-    mark_all_as_read=extend_schema(summary="✔️ Barcha bildirishnomalarni 'o'qilgan' deb belgilash"),
-    unread_count=extend_schema(summary="🔢 O'qilmagan bildirishnomalar soni")
+    mark_as_read=extend_schema(summary="✔️ Mark notification as read"),
+    mark_all_as_read=extend_schema(summary="✔️ Mark all notifications as read"),
+    unread_count=extend_schema(summary="🔢 Unread notifications count")
 )
 class NotificationViewSet(mixins.ListModelMixin,
                         mixins.RetrieveModelMixin,
@@ -38,7 +38,7 @@ class NotificationViewSet(mixins.ListModelMixin,
 
     @action(detail=True, methods=['post'])
     def mark_as_read(self, request, pk=None):
-        """Bitta bildirishnomani o'qilgan deb belgilaydi."""
+        """Mark a single notification as read."""
         notification = self.get_object()
         notification.is_read = True
         notification.save()
@@ -46,7 +46,7 @@ class NotificationViewSet(mixins.ListModelMixin,
 
     @action(detail=False, methods=['post'])
     def mark_all_as_read(self, request):
-        """Barcha o'qilmagan bildirishnomalarni o'qilgan deb belgilaydi."""
+        """Mark all unread notifications as read."""
         unread_notifications = self.get_queryset().filter(is_read=False)
         count = unread_notifications.count()
         unread_notifications.update(is_read=True)
@@ -54,6 +54,6 @@ class NotificationViewSet(mixins.ListModelMixin,
     
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
-        """O'qilmagan bildirishnomalar sonini qaytaradi."""
+        """Get the count of unread notifications."""
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'unread_count': count}, status=status.HTTP_200_OK)

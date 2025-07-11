@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import DailyReport, MonthlyReport, SalaryRecord
-# ✅ YANGILANGAN IMPORTLAR
 from .serializers import (
     DailyReportListSerializer, DailyReportDetailSerializer, DailyReportCreateSerializer,
     MonthlyReportListSerializer, MonthlyReportDetailSerializer,
@@ -18,8 +17,8 @@ from apps.notifications.utils import create_notification
 
 
 @extend_schema_view(
-    list=extend_schema(summary="📄 Mening kunlik hisobotlarim", tags=['Hisobotlar (Kunlik)']),
-    create=extend_schema(summary="✍️ Yangi kunlik hisobot yaratish", tags=['Hisobotlar (Kunlik)']),
+    list=extend_schema(summary="📄 My Daily Reports", tags=['Reports (Daily)']),
+    create=extend_schema(summary="✍️ Create New Daily Report", tags=['Reports (Daily)']),
 )
 class DailyReportViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStudent]
@@ -34,13 +33,12 @@ class DailyReportViewSet(viewsets.ModelViewSet):
             return DailyReportCreateSerializer
         return DailyReportDetailSerializer # retrieve, update, etc.
     def perform_create(self, serializer):
-        """Talabani avtomatik `student` maydoniga saqlaydi."""
         serializer.save(student=self.request.user)
 
 @extend_schema_view(
-    list=extend_schema(summary="📑 [STAFF] Oylik hisobotlar ro'yxati", tags=['Hisobotlar (Oylik)']),
-    retrieve=extend_schema(summary="📑 [STAFF/Owner] Bitta oylik hisobotni ko'rish", tags=['Hisobotlar (Oylik)']),
-    manage_report=extend_schema(request=MonthlyReportManageSerializer, summary="📊 [STAFF] Oylik hisobotni boshqarish", tags=['Hisobotlar (Oylik)']),
+    list=extend_schema(summary="📑 [STAFF] List of Monthly Reports", tags=['Reports (Monthly)']),
+    retrieve=extend_schema(summary="📑 [STAFF/Owner] View a Monthly Report", tags=['Reports (Monthly)']),
+    manage_report=extend_schema(request=MonthlyReportManageSerializer, summary="📊 [STAFF] Manage a Monthly Report", tags=['Reports (Monthly)']),
 )
 class MonthlyReportViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -75,24 +73,24 @@ class MonthlyReportViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vie
             report.rejection_reason=serializer.validated_data.get('rejection_reason'); report.salary.approved_by=None; report.salary.approved_at=None
         report.save(); report.salary.save()
 
-        status_text = "tasdiqlandi" if new_status == 'APPROVED' else "rad etildi"
-        message = f"Sizning {report.year}-{report.month} oyi uchun '{report.workspace.name}' ish maydonidagi hisobotingiz {status_text}."
+        status_text = "approved" if new_status == 'APPROVED' else "rejected"
+        message = f"Your report for {report.year}-{report.month} in the '{report.workspace.name}' workspace has been {status_text}."
         if new_status == 'REJECTED':
-            message += f" Sabab: {report.rejection_reason}"
-            
+            message += f" Reason: {report.rejection_reason}"
+
         create_notification(
             recipient=report.student,
             actor=request.user,
-            verb=f"hisobotingizni {status_text}",
+            verb=f"Your report has been {status_text}",
             message=message,
             action_object=report
         )
         return Response(self.get_serializer(report).data)
 
 @extend_schema_view(
-    list=extend_schema(summary="💰 Maosh yozuvlari ro'yxati", tags=['Maoshlar']),
-    retrieve=extend_schema(summary="💰 Bitta maosh yozuvini ko'rish", tags=['Maoshlar']),
-    mark_as_paid=extend_schema(request=SalaryPaidSerializer, summary="💵 [STAFF] Maoshni 'To'langan' deb belgilash", tags=['Maoshlar']),
+    list=extend_schema(summary="💰 List of Salary Records", tags=['Salaries']),
+    retrieve=extend_schema(summary="💰 View a Salary Record", tags=['Salaries']),
+    mark_as_paid=extend_schema(request=SalaryPaidSerializer, summary="💵 [STAFF] Mark Salary as 'Paid'", tags=['Salaries']),
 )
 class SalaryViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -117,14 +115,14 @@ class SalaryViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
     def mark_as_paid(self, request, pk=None):
         salary_record = self.get_object()
         if salary_record.status != 'APPROVED':
-            return Response({'error': "Faqat 'Tasdiqlangan' maoshni to'langan deb belgilash mumkin."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': "Only approved salaries can be marked as paid."}, status=status.HTTP_400_BAD_REQUEST)
         salary_record.status = 'PAID'; salary_record.paid_at = timezone.now(); salary_record.save()
     
         create_notification(
             recipient=salary_record.student,
             actor=request.user,
-            verb="maoshingizni to'ladi",
-            message=f"Sizning {salary_record.year}-{salary_record.month} oyi uchun '{salary_record.workspace.name}'dagi maoshingiz to'landi.",
+            verb="Salary Paid",
+            message=f"Your salary for {salary_record.year}-{salary_record.month} in the '{salary_record.workspace.name}' workspace has been paid.",
             action_object=salary_record
         )
         return Response(self.get_serializer(salary_record).data)

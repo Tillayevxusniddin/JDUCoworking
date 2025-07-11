@@ -6,23 +6,22 @@ from django.db.models import Q
 from apps.notifications.utils import create_notification
 
 def update_overdue_tasks():
-    """Muddati o'tgan vazifalarni topib, statusini 'FAILED' ga o'zgartiradi va bildirishnoma yuboradi."""
+    """Update overdue tasks to 'FAILED' status and notify the task creator."""
     now = timezone.now().date()
     
     overdue_tasks = Task.objects.filter(
         due_date__lt=now
     ).exclude(
         Q(status='COMPLETED') | Q(status='CANCELED') | Q(status='FAILED')
-    ).select_related('created_by') # ✅ `created_by`ni oldindan yuklab olamiz
+    ).select_related('created_by')
 
     if overdue_tasks.exists():
-        # ✅ BILDIRISHNOMA YUBORISH
         for task in overdue_tasks:
             create_notification(
                 recipient=task.created_by,
-                actor=None, # Tizim tomonidan
-                verb="siz yaratgan vazifaning muddati o'tib ketdi",
-                message=f"DIQQAT: Siz yaratgan '{task.title}' nomli vazifaning muddati o'tib ketganligi uchun 'Bajarilmadi' (Failed) deb belgilandi.",
+                actor=None,
+                verb="Task overdue",
+                message=f"The task '{task.title}' is overdue and has been marked as 'FAILED'.",
                 action_object=task
             )
 

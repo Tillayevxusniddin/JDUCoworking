@@ -3,7 +3,6 @@
 from rest_framework import serializers
 from .models import Meeting, MeetingAttendee
 from apps.users.models import User
-# ✅ YORDAMCHI OPTIMALLASHTIRILGAN SERIALIZER'LARNI IMPORT QILAMIZ
 from apps.users.serializers import UserSummarySerializer
 from apps.workspaces.serializers import WorkspaceSummarySerializer
 from apps.workspaces.models import Workspace
@@ -15,7 +14,6 @@ from drf_spectacular.types import OpenApiTypes
 # ----------------- MeetingAttendee Serializers -----------------
 
 class MeetingAttendeeListSerializer(serializers.ModelSerializer):
-    """Qatnashuvchilar ro'yxati uchun optimallashtirilgan serializer."""
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
@@ -24,7 +22,6 @@ class MeetingAttendeeListSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'status', 'status_display']
 
 class MeetingAttendeeDetailSerializer(serializers.ModelSerializer):
-    """Bitta qatnashuvchi uchun batafsil ma'lumot."""
     user = UserSummarySerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
@@ -36,7 +33,6 @@ class MeetingAttendeeDetailSerializer(serializers.ModelSerializer):
 # ----------------- Meeting Serializers -----------------
 
 class MeetingListSerializer(serializers.ModelSerializer):
-    """Uchrashuvlar ro'yxati uchun optimallashtirilgan serializer."""
     organizer = serializers.PrimaryKeyRelatedField(read_only=True)
     workspace = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -51,14 +47,11 @@ class MeetingListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.INT)
     def get_attendees_count(self, obj):
-        # .count() dan foydalanish .all() dan ko'ra samaraliroq
         return obj.attendees.count()
 
 class MeetingDetailSerializer(serializers.ModelSerializer):
-    """Bitta uchrashuv uchun batafsil ma'lumot."""
     organizer = UserSummarySerializer(read_only=True)
     workspace = WorkspaceSummarySerializer(read_only=True, allow_null=True)
-    # ✅ Qatnashuvchilar ro'yxatini ham optimallashtirilgan serializer bilan ko'rsatamiz
     attendees = MeetingAttendeeListSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     audience_type_display = serializers.CharField(source='get_audience_type_display', read_only=True)
@@ -78,7 +71,7 @@ class MeetingCreateSerializer(serializers.ModelSerializer):
     )
     workspace = serializers.PrimaryKeyRelatedField(
         queryset=Workspace.objects.all(),
-        required=False, # Endi majburiy emas, audience_type ga bog'liq
+        required=False,
         allow_null=True
     )
 
@@ -90,13 +83,12 @@ class MeetingCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        # ... mavjud validatsiya mantiqi o'zgarishsiz qoladi ...
         if data.get('start_time') >= data.get('end_time'):
-            raise serializers.ValidationError("Uchrashuvning tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak.")
+            raise serializers.ValidationError("The meeting end time must be after the start time..")
         if data.get('audience_type') == Meeting.AudienceType.WORKSPACE_MEMBERS and not data.get('workspace'):
-            raise serializers.ValidationError({"workspace": "Bu turdagi uchrashuv uchun ish maydoni ko'rsatilishi shart."})
+            raise serializers.ValidationError({"workspace": "A workspace must be specified for this type of meeting."})
         if data.get('audience_type') == Meeting.AudienceType.SPECIFIC_USERS and not data.get('invited_users'):
-            raise serializers.ValidationError({"invited_users": "Bu turdagi uchrashuv uchun foydalanuvchilar ro'yxati bo'sh bo'lishi mumkin emas."})
+            raise serializers.ValidationError({"invited_users": "The list of users cannot be empty for this type of meeting."})
         return data
 
 class AttendeeStatusUpdateSerializer(serializers.ModelSerializer):
@@ -106,7 +98,7 @@ class AttendeeStatusUpdateSerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         if value not in [MeetingAttendee.Status.ACCEPTED, MeetingAttendee.Status.DECLINED]:
-            raise serializers.ValidationError("Siz faqat 'ACCEPTED' yoki 'DECLINED' statusini tanlay olasiz.")
+            raise serializers.ValidationError("You can only choose the status 'ACCEPTED' or 'DECLINED'.")
         return value
 
 class MeetingLinkUpdateSerializer(serializers.ModelSerializer):
@@ -116,5 +108,5 @@ class MeetingLinkUpdateSerializer(serializers.ModelSerializer):
     
     def validate_meeting_link(self, value):
         if not value.startswith("https://meet.google.com/"):
-            raise serializers.ValidationError("Iltimos, to'g'ri Google Meet havolasini kiriting.")
+            raise serializers.ValidationError("Please enter a valid Google Meet link.")
         return value

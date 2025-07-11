@@ -8,7 +8,7 @@ class WorkspaceAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'workspace_type', 'created_at']
     search_fields = ['name', 'description', 'created_by__email']
     raw_id_fields = ['created_by']
-    # Agar koʻp aʼzosi boʻlsa, members bilan koʻrish chogʻida eʼtibor berish mumkin. Misol: Inline qilsa bo'ladi.
+    
 
 @admin.register(WorkspaceMember)
 class WorkspaceMemberAdmin(admin.ModelAdmin):

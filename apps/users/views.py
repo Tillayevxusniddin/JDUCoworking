@@ -18,7 +18,7 @@ from .serializers import (
 )
 from .permissions import IsAdminUser, IsStaffUser, IsRecruiterUser, IsStudentUser, IsAdminOrStaff, IsProfileOwner
 
-@extend_schema(summary="🔐 Parolni o'zgartirish", tags=["Authentication"])
+@extend_schema(summary="🔐 Change Password", tags=["Authentication"])
 class ChangePasswordView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -32,16 +32,16 @@ class ChangePasswordView(generics.UpdateAPIView):
         if serializer.is_valid(raise_exception=True):
             user.set_password(serializer.validated_data["new_password"])
             user.save()
-            return Response({"message": "Parol muvaffaqiyatli o'zgartirildi."}, status=status.HTTP_200_OK)
+            return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 @extend_schema_view(
-    list=extend_schema(summary="👥 [ADMIN] Barcha foydalanuvchilar ro'yxati", tags=["User Management"]),
-    retrieve=extend_schema(summary="👤 [ADMIN] Bitta foydalanuvchini olish", tags=["User Management"]),
-    create=extend_schema(summary="➕ [ADMIN] Foydalanuvchi yaratish", tags=["User Management"]),
-    update=extend_schema(summary="✏️ [ADMIN] Foydalanuvchini tahrirlash", tags=["User Management"]),
-    partial_update=extend_schema(summary="📝 [ADMIN] Foydalanuvchini qisman tahrirlash", tags=["User Management"]),
-    destroy=extend_schema(summary="🗑️ [ADMIN] Foydalanuvchini o'chirish", tags=["User Management"]),
-    me=extend_schema(summary="👤 Joriy foydalanuvchi ma'lumotlari", tags=["User Management"])
+    list=extend_schema(summary="👥 [ADMIN] List of all users", tags=["User Management"]),
+    retrieve=extend_schema(summary="👤 [ADMIN] Get a single user", tags=["User Management"]),
+    create=extend_schema(summary="➕ [ADMIN] Create a user", tags=["User Management"]),
+    update=extend_schema(summary="✏️ [ADMIN] Update a user", tags=["User Management"]),
+    partial_update=extend_schema(summary="📝 [ADMIN] Partially update a user", tags=["User Management"]),
+    destroy=extend_schema(summary="🗑️ [ADMIN] Delete a user", tags=["User Management"]),
+    me=extend_schema(summary="👤 Get current user details", tags=["User Management"])
 )
 class UserManagementViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-created_at')
@@ -68,10 +68,10 @@ class BaseProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin,
     pass
 
 @extend_schema_view(
-    list=extend_schema(summary="🎓 Barcha talaba profillari", tags=["Student Profiles"]),
-    retrieve=extend_schema(summary="🎓 Bitta talaba profili", tags=["Student Profiles"]),
-    update=extend_schema(summary="✏️ [ADMIN/STAFF] Talaba profilini tahrirlash", tags=["Student Profiles"]),
-    me=extend_schema(summary="🎓 Mening profilim (Talaba)", tags=["Student Profiles"])
+    list=extend_schema(summary="🎓 List of all student profiles", tags=["Student Profiles"]),
+    retrieve=extend_schema(summary="🎓 Get a single student profile", tags=["Student Profiles"]),
+    update=extend_schema(summary="✏️ [ADMIN/STAFF] Update a student profile", tags=["Student Profiles"]),
+    me=extend_schema(summary="🎓 Get my profile (Student)", tags=["Student Profiles"])
 )
 class StudentProfileViewSet(BaseProfileViewSet):
     queryset = Student.objects.select_related('user').all()
@@ -94,7 +94,6 @@ class StudentProfileViewSet(BaseProfileViewSet):
     def me(self, request, *args, **kwargs):
         instance = self.request.user.student_profile
         if request.method == 'GET':
-            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
             serializer = StudentProfileDetailSerializer(instance)
             return Response(serializer.data)
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))
@@ -103,9 +102,9 @@ class StudentProfileViewSet(BaseProfileViewSet):
         return Response(StudentProfileDetailSerializer(instance).data)
 
 @extend_schema_view(
-    list=extend_schema(summary="💼 Barcha recruiter profillari", tags=["Recruiter Profiles"]),
-    retrieve=extend_schema(summary="💼 Bitta recruiter profili", tags=["Recruiter Profiles"]),
-    me=extend_schema(summary="💼 Mening profilim (Recruiter)", tags=["Recruiter Profiles"])
+    list=extend_schema(summary="💼 List of all recruiter profiles", tags=["Recruiter Profiles"]),
+    retrieve=extend_schema(summary="💼 Get a single recruiter profile", tags=["Recruiter Profiles"]),
+    me=extend_schema(summary="💼 Get my profile (Recruiter)", tags=["Recruiter Profiles"])
 )
 class RecruiterProfileViewSet(BaseProfileViewSet):
     queryset = Recruiter.objects.select_related('user').all()
@@ -125,7 +124,6 @@ class RecruiterProfileViewSet(BaseProfileViewSet):
     def me(self, request, *args, **kwargs):
         instance = request.user.recruiter_profile
         if request.method == 'GET':
-            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
             serializer = RecruiterProfileDetailSerializer(instance)
             return Response(serializer.data)
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))
@@ -135,9 +133,9 @@ class RecruiterProfileViewSet(BaseProfileViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="👔 Barcha xodim profillari", tags=["Staff Profiles"]),
-    retrieve=extend_schema(summary="👔 Bitta xodim profili", tags=["Staff Profiles"]),
-    me=extend_schema(summary="👔 Mening profilim (Staff)", tags=["Staff Profiles"])
+    list=extend_schema(summary="👔 List of all staff profiles", tags=["Staff Profiles"]),
+    retrieve=extend_schema(summary="👔 Get a single staff profile", tags=["Staff Profiles"]),
+    me=extend_schema(summary="👔 Get my profile (Staff)", tags=["Staff Profiles"])
 )
 class StaffProfileViewSet(BaseProfileViewSet):
     queryset = Staff.objects.select_related('user').all()
@@ -157,7 +155,6 @@ class StaffProfileViewSet(BaseProfileViewSet):
     def me(self, request, *args, **kwargs):
         instance = request.user.staff_profile
         if request.method == 'GET':
-            # ✅ TUZATILGAN QISM: To'liq ma'lumot qaytaramiz
             serializer = StaffProfileDetailSerializer(instance)
             return Response(serializer.data)
         serializer = self.get_serializer(instance, data=request.data, partial=(request.method == 'PATCH'))

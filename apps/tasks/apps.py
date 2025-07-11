@@ -1,7 +1,7 @@
 # apps/tasks/apps.py
 
 from django.apps import AppConfig
-import sys  # <-- Sistemani import qilamiz
+import sys 
 
 class TasksConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -9,11 +9,9 @@ class TasksConfig(AppConfig):
 
     def ready(self):
         """
-        Ilova ishga tushganda rejalashtirilgan vazifalarni ishga tushirish.
-        Scheduler faqat `runserver` buyrug'i bilan ishga tushiriladi.
+        Import signals to ensure they are registered when the app is ready.
         """
-        # --- XATOLIKNI TUZATISH UCHUN QO'SHILGAN SHART ---
         if 'runserver' in sys.argv:
             from . import scheduler
             scheduler.start()
-        # ----------------------------------------------------
+        

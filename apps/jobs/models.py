@@ -4,15 +4,10 @@ from django.db import models
 from apps.users.models import User
 from apps.workspaces.models import Workspace
 
-# --- 1. LOYIHA MODELI ---
 class Job(models.Model):
-    """
-    Umumiy loyiha. Faqat Admin tomonidan yaratiladi.
-    Har bir Job o'zining Workspace'iga ega.
-    """
     STATUS_CHOICES = (
-        ('ACTIVE', 'Faol'),
-        ('CLOSED', 'Yopilgan'),
+        ('ACTIVE', 'Active'),
+        ('CLOSED', 'Closed'),
     )
     workspace = models.OneToOneField(
         Workspace,
@@ -20,11 +15,11 @@ class Job(models.Model):
         null=True, blank=True,
         related_name='job'
     )
-    title = models.CharField(max_length=200, verbose_name="Loyiha nomi")
-    description = models.TextField(verbose_name="Loyiha tavsifi")
+    title = models.CharField(max_length=200, verbose_name="Project title")
+    description = models.TextField(verbose_name="Project description")
     base_hourly_rate = models.DecimalField(
         max_digits=10, decimal_places=2, 
-        verbose_name="Standart soatbay stavka"
+        verbose_name="Standard hourly rate"
     )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_jobs')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
@@ -40,22 +35,18 @@ class Job(models.Model):
     def __str__(self):
         return self.title
 
-# --- 2. VAKANSIYA MODELI ---
 class JobVacancy(models.Model):
-    """
-    Ma'lum bir loyiha (Job) uchun ochilgan ish o'rni (vakansiya).
-    Staff tomonidan yaratiladi.
-    """
+
     STATUS_CHOICES = (
-        ('OPEN', 'Ochiq'),
-        ('CLOSED', 'Yopilgan'),
+        ('OPEN', 'Open'),
+        ('CLOSED', 'Closed'),
     )
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='vacancies')
-    title = models.CharField(max_length=200, verbose_name="Vakansiya sarlavhasi")
-    description = models.TextField(verbose_name="Vakansiya tavsifi")
-    requirements = models.TextField(verbose_name="Talablar")
-    slots_available = models.PositiveIntegerField(default=1, verbose_name="Bo'sh o'rinlar soni")
-    application_deadline = models.DateField(verbose_name="Ariza topshirishning oxirgi kuni")
+    title = models.CharField(max_length=200, verbose_name="Vacancy title")
+    description = models.TextField(verbose_name="Vacancy description")
+    requirements = models.TextField(verbose_name="Requirements")
+    slots_available = models.PositiveIntegerField(default=1, verbose_name="Available slots")
+    application_deadline = models.DateField(verbose_name="Application deadline")
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_vacancies')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -63,29 +54,29 @@ class JobVacancy(models.Model):
     class Meta:
         db_table = 'job_vacancies'
         ordering = ['-created_at']
-        verbose_name = "Vakansiya"
-        verbose_name_plural = "Vakansiyalar"
-    
-    def __str__(self):
-        return f"{self.title} ({self.job.title} loyihasi uchun)"
+        verbose_name = "Vacancy"
+        verbose_name_plural = "Vacancies"
 
-# --- 3. TALABANING ARIZASI MODELI ---
+    def __str__(self):
+        return f"{self.title} ({self.job.title} project)"
+
+
 class VacancyApplication(models.Model):
     """
-    Talabaning ma'lum bir vakansiyaga topshirgan arizasi.
+    Applicant's application for a specific vacancy.
     """
     STATUS_CHOICES = (
-        ('PENDING', 'Kutilmoqda'),
-        ('REVIEWING', 'Ko\'rib chiqilmoqda'),
-        ('ACCEPTED', 'Qabul qilingan'),
-        ('REJECTED', 'Rad etilgan'),
+        ('PENDING', 'Pending'),
+        ('REVIEWING', 'Reviewing'),
+        ('ACCEPTED', 'Accepted'),
+        ('REJECTED', 'Rejected'),
     )
     vacancy = models.ForeignKey(JobVacancy, on_delete=models.CASCADE, related_name='applications')
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vacancy_applications')
     cover_letter = models.TextField(blank=True, null=True)
     applied_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    notes = models.TextField(blank=True, null=True, verbose_name="Staff uchun izohlar")
+    notes = models.TextField(blank=True, null=True, verbose_name="Staff notes")
 
     class Meta:
         db_table = 'vacancy_applications'

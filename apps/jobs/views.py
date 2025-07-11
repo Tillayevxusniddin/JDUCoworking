@@ -18,12 +18,12 @@ from apps.notifications.utils import create_notification
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Barcha loyihalar ro'yxati", tags=['Loyihalar (Jobs)']),
-    retrieve=extend_schema(summary="Bitta loyiha ma'lumotlari", tags=['Loyihalar (Jobs)']),
-    create=extend_schema(summary="[ADMIN] Yangi loyiha yaratish", request=JobCreateUpdateSerializer, tags=['Loyihalar (Jobs)']),
-    update=extend_schema(summary="[ADMIN] Loyihani tahrirlash", request=JobCreateUpdateSerializer, tags=['Loyihalar (Jobs)']),
-    partial_update=extend_schema(summary="[ADMIN] Loyihani qisman tahrirlash", request=JobCreateUpdateSerializer, tags=['Loyihalar (Jobs)']),
-    destroy=extend_schema(summary="[ADMIN] Loyihani o'chirish", tags=['Loyihalar (Jobs)']),
+    list=extend_schema(summary="All Projects List", tags=['Projects']),
+    retrieve=extend_schema(summary="Project Details", tags=['Projects']),
+    create=extend_schema(summary="[ADMIN] Create New Project", request=JobCreateUpdateSerializer, tags=['Projects']),
+    update=extend_schema(summary="[ADMIN] Edit Project", request=JobCreateUpdateSerializer, tags=['Projects']),
+    partial_update=extend_schema(summary="[ADMIN] Partially Edit Project", request=JobCreateUpdateSerializer, tags=['Projects']),
+    destroy=extend_schema(summary="[ADMIN] Delete Project", tags=['Projects']),
 )
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all().select_related('workspace', 'created_by')
@@ -43,23 +43,19 @@ class JobViewSet(viewsets.ModelViewSet):
             return JobCreateUpdateSerializer
         return JobDetailSerializer
     def perform_create(self, serializer):
-        """Job yaratuvchisini avtomatik belgilaydi."""
+        """Specifies the job creator."""
         serializer.save(created_by=self.request.user)
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Barcha vakansiyalar ro'yxati", tags=['Vakansiyalar']),
-    retrieve=extend_schema(summary="Bitta vakansiya ma'lumotlari", tags=['Vakansiyalar']),
-    create=extend_schema(summary="[STAFF] Yangi vakansiya yaratish", request=JobVacancyCreateUpdateSerializer, tags=['Vakansiyalar']),
-    update=extend_schema(summary="[STAFF] Vakansiyani tahrirlash", request=JobVacancyCreateUpdateSerializer, tags=['Vakansiyalar']),
-    partial_update=extend_schema(summary="[STAFF] Vakansiyani qisman tahrirlash", request=JobVacancyCreateUpdateSerializer, tags=['Vakansiyalar']),
-    destroy=extend_schema(summary="[STAFF] Vakansiyani o'chirish", tags=['Vakansiyalar']),
+    list=extend_schema(summary="All Vacancies List", tags=['Vacancies']),
+    retrieve=extend_schema(summary="Vacancy Details", tags=['Vacancies']),
+    create=extend_schema(summary="[STAFF] Create New Vacancy", request=JobVacancyCreateUpdateSerializer, tags=['Vacancies']),
+    update=extend_schema(summary="[STAFF] Edit Vacancy", request=JobVacancyCreateUpdateSerializer, tags=['Vacancies']),
+    partial_update=extend_schema(summary="[STAFF] Partially Edit Vacancy", request=JobVacancyCreateUpdateSerializer, tags=['Vacancies']),
+    destroy=extend_schema(summary="[STAFF] Delete Vacancy", tags=['Vacancies']),
 )
 class JobVacancyViewSet(viewsets.ModelViewSet):
-    """
-    Vakansiyalar (JobVacancy) ustida amallar. STAFF to'liq huquqga ega.
-    Talabalar faqat ochiq vakansiyalarni ko'ra oladi.
-    """
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return JobVacancy.objects.none()
@@ -81,26 +77,22 @@ class JobVacancyViewSet(viewsets.ModelViewSet):
         return [IsAdminOrStaff()]
     
     def perform_create(self, serializer):
-        """Vakansiya yaratuvchisini avtomatik belgilaydi."""
         serializer.save(created_by=self.request.user)
 
 
 @extend_schema_view(
     list=extend_schema(
-        summary="Arizalar ro'yxati", 
-        tags=['Arizalar'],
-        parameters=[OpenApiParameter(name='vacancy_id', type=OpenApiTypes.INT, description='Vakansiya IDsi bo\'yicha filtrlash')]
+        summary="All Applications List", 
+        tags=['Applications'],
+        parameters=[OpenApiParameter(name='vacancy_id', type=OpenApiTypes.INT, description='Filter by Vacancy ID')]
     ),
-    retrieve=extend_schema(summary="Bitta ariza ma'lumotlari", tags=['Arizalar']),
-    create=extend_schema(summary="[STUDENT] Vakansiyaga ariza topshirish", request=VacancyApplicationCreateSerializer, tags=['Arizalar']),
-    update=extend_schema(summary="[STAFF] Ariza statusini o'zgartirish", request=VacancyApplicationManageSerializer, tags=['Arizalar']),
-    partial_update=extend_schema(summary="[STAFF] Ariza statusini o'zgartirish", request=VacancyApplicationManageSerializer, tags=['Arizalar']),
-    destroy=extend_schema(summary="[Applicant] Arizani qaytarib olish", tags=['Arizalar']),
+    retrieve=extend_schema(summary="Application Details", tags=['Applications']),
+    create=extend_schema(summary="[STUDENT] Apply for Vacancy", request=VacancyApplicationCreateSerializer, tags=['Applications']),
+    update=extend_schema(summary="[STAFF] Change Application Status", request=VacancyApplicationManageSerializer, tags=['Applications']),
+    partial_update=extend_schema(summary="[STAFF] Change Application Status", request=VacancyApplicationManageSerializer, tags=['Applications']),
+    destroy=extend_schema(summary="[Applicant] Withdraw Application", tags=['Applications']),
 )
 class VacancyApplicationViewSet(viewsets.ModelViewSet):
-    """
-    Vakansiyalarga topshirilgan arizalar (VacancyApplication) ustida amallar.
-    """
     queryset = VacancyApplication.objects.all().select_related('applicant', 'vacancy__job')
 
     def get_queryset(self):
@@ -116,8 +108,6 @@ class VacancyApplicationViewSet(viewsets.ModelViewSet):
             if vacancy_id:
                 return queryset.filter(vacancy_id=vacancy_id)
             return queryset
-        
-        # ✅ TUZATILGAN QISM: qavslar olib tashlandi
         return self.queryset.filter(applicant=user)
 
     def get_serializer_class(self):
@@ -141,27 +131,20 @@ class VacancyApplicationViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
     
     def perform_create(self, serializer):
-        """Talaba yangi ariza topshirganda vakansiya yaratuvchisiga bildirishnoma yuborish."""
         application = serializer.save(applicant=self.request.user)
         vacancy_creator = application.vacancy.created_by
         
         create_notification(
             recipient=vacancy_creator,
             actor=application.applicant,
-            verb="sizning vakansiyangizga ariza topshirdi",
-            message=f"'{application.applicant.get_full_name()}' siz yaratgan '{application.vacancy.title}' vakansiyasiga ariza topshirdi.",
+            verb="Your application has been submitted.",
+            message=f"'{application.applicant.get_full_name()}' has submitted an application for the '{application.vacancy.title}' vacancy.",
             action_object=application
         )
     
     def perform_update(self, serializer):
-        """
-        Ariza statusi o'zgarganda (lekin 'ACCEPTED' emas) talabaga bildirishnoma yuborish.
-        'ACCEPTED' holati signal orqali boshqariladi.
-        """
         application = serializer.save()
         new_status = application.status
-        
-        # reviewed_by maydonini qo'lda to'ldiramiz, bu signal uchun kerak.
         if not hasattr(application, '_reviewed_by_user'):
              application._reviewed_by_user = self.request.user
         
@@ -169,15 +152,15 @@ class VacancyApplicationViewSet(viewsets.ModelViewSet):
             create_notification(
                 recipient=application.applicant,
                 actor=self.request.user,
-                verb="arizangizni ko'rib chiqishni boshladi",
-                message=f"Sizning '{application.vacancy.title}' vakansiyasiga topshirgan arizangiz ko'rib chiqilmoqda.",
+                verb="Your application is under review.",
+                message=f"Your application for the '{application.vacancy.title}' vacancy is being reviewed.",
                 action_object=application
             )
         elif new_status == 'REJECTED':
              create_notification(
                 recipient=application.applicant,
                 actor=self.request.user,
-                verb="arizangizni rad etdi",
-                message=f"Afsuski, sizning '{application.vacancy.title}' vakansiyasiga topshirgan arizangiz rad etildi.",
+                verb="Your application has been rejected.",
+                message=f"Unfortunately, your application for the '{application.vacancy.title}' vacancy has been rejected.",
                 action_object=application
             )

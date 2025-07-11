@@ -11,17 +11,15 @@ SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.co
 
 def create_google_meet_event(title, description, start_time, end_time, attendees_emails):
     if not SERVICE_ACCOUNT_FILE:
-        print("DIQQAT: Google Service Account fayli sozlanmagan.")
+        print("WARNING: Google Service Account file is not configured.")
         return None, None
 
     try:
-        # ✅ ASOSIY O'ZGARISH: Bu yerga universitetingiz emailini yozasiz
         DELEGATED_USER_EMAIL = '225158x@jdu.uz'
 
         credentials = service_account.Credentials.from_service_account_file(
             str(SERVICE_ACCOUNT_FILE), scopes=SCOPES
         )
-        # Boshqa foydalanuvchi ("xo'jayin") nomidan ishlash uchun
         delegated_credentials = credentials.with_subject(DELEGATED_USER_EMAIL)
         service = build('calendar', 'v3', credentials=delegated_credentials)
 
@@ -42,12 +40,12 @@ def create_google_meet_event(title, description, start_time, end_time, attendees
         }
 
         created_event = service.events().insert(
-            calendarId='primary',  # `DELEGATED_USER_EMAIL`ning asosiy kalendari
+            calendarId='primary',  
             body=event_body,
             conferenceDataVersion=1
         ).execute()
 
-        print(f"✅ TADBIR TO'LIQ ({DELEGATED_USER_EMAIL} uchun) YARATILDI")
+        print(f"✅ Event was Created for  ({DELEGATED_USER_EMAIL})")
 
         conference_data = created_event.get('conferenceData', {})
         meet_link = next((ep['uri'] for ep in conference_data.get('entryPoints', []) if ep.get('entryPointType') == 'video'), None)
@@ -56,6 +54,6 @@ def create_google_meet_event(title, description, start_time, end_time, attendees
         return meet_link, event_id
 
     except Exception as e:
-        print("❌ GOOGLE CALENDAR'DA TADBIR YARATISHDA XATOLIK:")
+        print("❌ Error occurred while creating event:")
         traceback.print_exc()
         return None, None

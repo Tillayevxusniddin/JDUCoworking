@@ -6,15 +6,15 @@ from apps.workspaces.models import Workspace
 
 class Meeting(models.Model):
     class Status(models.TextChoices):
-        SCHEDULED = 'SCHEDULED', 'Rejalashtirilgan'
-        ONGOING = 'ONGOING', 'Davom etmoqda'
-        COMPLETED = 'COMPLETED', 'Tugallangan'
-        CANCELLED = 'CANCELLED', 'Bekor qilingan'
+        SCHEDULED = 'SCHEDULED', 'scheduled'
+        ONGOING = 'ONGOING', 'ongoing'
+        COMPLETED = 'COMPLETED', 'completed'
+        CANCELLED = 'CANCELLED', 'cancelled'
     
     class AudienceType(models.TextChoices):
-        WORKSPACE_MEMBERS = 'WORKSPACE_MEMBERS', 'Ish maydoni a\'zolari'
-        ALL_STAFF = 'ALL_STAFF', 'Barcha xodimlar'
-        SPECIFIC_USERS = 'SPECIFIC_USERS', 'Tanlangan foydalanuvchilar'
+        WORKSPACE_MEMBERS = 'WORKSPACE_MEMBERS', 'Workspace members'
+        ALL_STAFF = 'ALL_STAFF', 'All staff'
+        SPECIFIC_USERS = 'SPECIFIC_USERS', 'Specific users'
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -24,13 +24,12 @@ class Meeting(models.Model):
     end_time = models.DateTimeField()
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SCHEDULED)
     
-    # Google Meet integratsiyasi uchun
+    # For Google Meet integration
     meeting_link = models.URLField(max_length=512, blank=True, null=True)
     google_event_id = models.CharField(max_length=255, blank=True, null=True)
 
-    # Kimlar taklif qilinishi
+    # Audience type for the meeting
     audience_type = models.CharField(max_length=20, choices=AudienceType.choices, default=AudienceType.WORKSPACE_MEMBERS)
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -43,9 +42,9 @@ class Meeting(models.Model):
 
 class MeetingAttendee(models.Model):
     class Status(models.TextChoices):
-        INVITED = 'INVITED', 'Taklif qilingan'
-        ACCEPTED = 'ACCEPTED', 'Qabul qilingan'
-        DECLINED = 'DECLINED', 'Rad etilgan'
+        INVITED = 'INVITED', 'Invited'
+        ACCEPTED = 'ACCEPTED', 'Accepted'
+        DECLINED = 'DECLINED', 'Declined'
 
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='attendees')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='meeting_attendances')

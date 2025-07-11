@@ -5,34 +5,33 @@ from django.core.exceptions import ValidationError
 from apps.users.models import User
 
 class Workspace(models.Model):
-    # Bu model o'zgarishsiz qoladi
-    name = models.CharField(max_length=200, verbose_name="Ish Maydoni")
-    description = models.TextField(blank=True, verbose_name="Tavsifi")
+    name = models.CharField(max_length=200, verbose_name="Workspace name")
+    description = models.TextField(blank=True, verbose_name="Workspace description")
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='created_workspaces',
-        verbose_name='Yaratgan foydalanuvchi'
+        verbose_name='Creator (Workspace Owner)'
     )
-    is_active = models.BooleanField(default=True, verbose_name="Faol ish maydoni")
-    max_members = models.PositiveIntegerField(default=50, verbose_name="Maksimal a'zolar soni")
+    is_active = models.BooleanField(default=True, verbose_name="Active Workspace")
+    max_members = models.PositiveIntegerField(default=50, verbose_name="Max Members")
     class WorkspaceType(models.TextChoices):
         JOB_PROJECT = 'JOB_PROJECT', 'Job Project'
     workspace_type = models.CharField(
         max_length=20,
         choices=WorkspaceType.choices,
         default=WorkspaceType.JOB_PROJECT,
-        verbose_name="Ish maydoni turi"
+        verbose_name="Workspace Type"
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan sana")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan sana")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
 
     class Meta:
         db_table = 'workspaces'
         ordering = ['-created_at']
-        verbose_name = "Ish Maydoni"
-        verbose_name_plural = "Ish Maydonlari"
-        
+        verbose_name = "Workspace"
+        verbose_name_plural = "Workspaces"
+
     def __str__(self):
         return self.name
     
@@ -45,7 +44,6 @@ class Workspace(models.Model):
         return self.active_members_count >= self.max_members
     
 class WorkspaceMember(models.Model):
-    # --- CHOICES'DAGI XATOLIK TO'G'IRLANDI ---
     MEMBER_ROLE_CHOICES = [
         ('STUDENT', 'Student'),
         ('TEAMLEADER', 'Team Leader'),
@@ -53,33 +51,32 @@ class WorkspaceMember(models.Model):
         ('STAFF', 'Staff'),
         ('RECRUITER', 'Recruiter'),
     ]
-    # ----------------------------------------
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
         related_name='members',
-        verbose_name="Ish maydoni"
+        verbose_name="Workspace"
     )
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='workspace_memberships',
-        verbose_name="Foydalanuvchi"
+        verbose_name="User"
     )
     role = models.CharField(
         max_length=20,
         choices=MEMBER_ROLE_CHOICES,
-        verbose_name="A'zolik roli" 
+        verbose_name="Membership Role"
     )
     hourly_rate_override = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
-        verbose_name="Shaxsiy soatbay stavka (agar standartdan farq qilsa)",
-        help_text="Agar bu maydon bo'sh bo'lsa, ishning standart stavkasi ishlatiladi."
+        verbose_name="Personal Hourly Rate (if different from standard)",
+        help_text="If this field is left blank, the standard rate will be used."
     )
 
-    joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Qo'shilgan sana")
-    is_active = models.BooleanField(default=True, verbose_name="Faol a'zo")
-    last_activity = models.DateTimeField(auto_now=True, verbose_name="So'nggi faoliyat")
+    joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Joined at")
+    is_active = models.BooleanField(default=True, verbose_name="Active Member")
+    last_activity = models.DateTimeField(auto_now=True, verbose_name="Last Activity")
 
     class Meta:
         db_table = 'workspace_members'
@@ -89,16 +86,15 @@ class WorkspaceMember(models.Model):
                 name='unique_workspace_membership')
         ]
         ordering = ['-joined_at']
-        verbose_name = "Ish Maydoni A'zosi"
-        verbose_name_plural = "Ish Maydoni A'zolari"
-    
+        verbose_name = "Workspace Member"
+        verbose_name_plural = "Workspace Members"
+
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} -> {self.workspace.name}"
     
     def clean(self):
         if not self.pk and self.workspace.is_full:
-            raise ValidationError("Ish maydoni to'liq, yangi a'zolar qo'shib bo'lmaydi.")
-            
+            raise ValidationError("Workspace is full, new members cannot be added.")
+
     def save(self, *args, **kwargs):
-        # Bu yerda clean'ni chaqirish shart emas, chunki serializer'da tekshiruv bor.
         super().save(*args, **kwargs)

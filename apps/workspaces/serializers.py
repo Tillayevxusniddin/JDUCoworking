@@ -5,20 +5,19 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from .models import Workspace, WorkspaceMember
 from apps.users.models import User
-# ✅ O'ZGARISH: UserSummarySerializer'ni import qilamiz
 from apps.users.serializers import UserSummarySerializer
 
 # ----------------- Workspace Serializers -----------------
 
 class WorkspaceSummarySerializer(serializers.ModelSerializer):
-    """Ish maydonining qisqa ma'lumotlarini (ID, nom) qaytaradi."""
+    """short summary of a workspace, used in lists."""
     class Meta:
         model = Workspace
         fields = ['id', 'name']
 
 class WorkspaceDetailSerializer(serializers.ModelSerializer):
-    """Bitta ish maydoni uchun to'liq ma'lumot."""
-    created_by = UserSummarySerializer(read_only=True) # ✅ To'liq emas, qisqa ma'lumot
+    """Detailed information about a workspace, used in detail views."""
+    created_by = UserSummarySerializer(read_only=True) 
 
     active_members_count = serializers.IntegerField(read_only=True)
     workspace_type_display = serializers.CharField(source='get_workspace_type_display', read_only=True)
@@ -32,8 +31,7 @@ class WorkspaceDetailSerializer(serializers.ModelSerializer):
         ]
 
 class WorkspaceListSerializer(serializers.ModelSerializer):
-    """Ish maydonlari ro'yxati uchun qisqa ma'lumot."""
-    # ✅ O'ZGARISH: `created_by` endi faqat ID qaytaradi
+    """short summary of workspaces for list views."""
     created_by = serializers.PrimaryKeyRelatedField(read_only=True)
     active_members_count = serializers.IntegerField(read_only=True)
     class Meta:
@@ -44,9 +42,9 @@ class WorkspaceListSerializer(serializers.ModelSerializer):
 # ----------------- WorkspaceMember Serializers -----------------
 
 class WorkspaceMemberDetailSerializer(serializers.ModelSerializer):
-    """Bitta ish maydoni a'zosi uchun to'liq ma'lumot."""
-    user = UserSummarySerializer(read_only=True) # ✅ Qisqa ma'lumot
-    workspace = WorkspaceSummarySerializer(read_only=True) # ✅ Qisqa ma'lumot
+    """Detailed information about a workspace member."""
+    user = UserSummarySerializer(read_only=True)
+    workspace = WorkspaceSummarySerializer(read_only=True)
     role_display = serializers.CharField(source='get_role_display', read_only=True)
 
     class Meta:
@@ -57,8 +55,7 @@ class WorkspaceMemberDetailSerializer(serializers.ModelSerializer):
         ]
 
 class WorkspaceMemberListSerializer(serializers.ModelSerializer):
-    """Ish maydoni a'zolari ro'yxati uchun qisqa ma'lumot."""
-    # ✅ O'ZGARISH: Bog'liqliklar faqat ID'lar bilan qaytariladi
+    """short summary of workspace members for list views."""
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     workspace = serializers.PrimaryKeyRelatedField(read_only=True)
     role_display = serializers.CharField(source='get_role_display', read_only=True)
@@ -74,18 +71,18 @@ class WorkspaceMemberCreateSerializer(serializers.ModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         write_only=True,
-        label="Foydalanuvchi ID"
+        label="User ID",
+        help_text="ID of the user to be added as a member."
     )
     class Meta:
         model = WorkspaceMember
         fields = ['user_id', 'is_active']
-    # ... qolgan validate va create metodlari o'zgarishsiz ...
     def validate(self, data):
         if getattr(self, 'swagger_fake_view', False): return data
         workspace_id = self.context['view'].kwargs.get('pk')
         user = data.get('user_id')
         if WorkspaceMember.objects.filter(user=user, workspace_id=workspace_id).exists():
-            raise serializers.ValidationError({"user_id": "Bu foydalanuvchi allaqachon ushbu ish maydoniga a'zo."})
+            raise serializers.ValidationError({"user_id": "This user is already a member of the workspace."})
         return data
     def create(self, validated_data):
         workspace_id = self.context['view'].kwargs.get('pk')
@@ -99,7 +96,7 @@ class WorkspaceMemberCreateSerializer(serializers.ModelSerializer):
                 if user.student_profile.level_status == 'TEAMLEAD': role = 'TEAMLEADER'
                 else: role = 'STUDENT'
             except User.student_profile.RelatedObjectDoesNotExist: role = 'STUDENT'
-        if not role: raise serializers.ValidationError("Foydalanuvchi uchun rol aniqlanmadi.")
+        if not role: raise serializers.ValidationError("Role could not be determined for the user.")
         return WorkspaceMember.objects.create(user=user, workspace_id=workspace_id, role=role, **validated_data)
 
 class WorkspaceMemberRateUpdateSerializer(serializers.ModelSerializer):

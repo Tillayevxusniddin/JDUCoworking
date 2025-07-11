@@ -9,7 +9,6 @@ from apps.reports.models import MonthlyReport
 from apps.notifications.utils import create_notification
 from .models import Task, TaskComment
 from .serializers import (
-    # ✅ YANGILANGAN IMPORTLAR
     TaskListSerializer, TaskDetailSerializer, 
     TaskCreateSerializer, TaskUpdateByTeamLeaderSerializer,
     TaskUpdateByAssigneeSerializer, TaskCommentSerializer, TaskCommentCreateSerializer
@@ -19,18 +18,17 @@ from .permissions import (
 )
 
 @extend_schema_view(
-    create=extend_schema(summary="📋 Yangi vazifa yaratish (Faqat TeamLeader)", tags=['Tasks']),
-    list=extend_schema(summary="📋 Ish maydonidagi vazifalar ro'yxati", tags=['Tasks']),
-    retrieve=extend_schema(summary="📋 Vazifa ma'lumotlarini olish", tags=['Tasks']),
-    update=extend_schema(summary="📋 Vazifani to'liq yangilash", tags=['Tasks']),
-    partial_update=extend_schema(summary="📋 Vazifani qisman yangilash", tags=['Tasks']),
-    destroy=extend_schema(summary="📋 Vazifani o'chirish (Faqat TeamLeader)", tags=['Tasks']),
+    create=extend_schema(summary="📋 Create New Task", tags=['Tasks']),
+    list=extend_schema(summary="📋 List Tasks in Workspace", tags=['Tasks']),
+    retrieve=extend_schema(summary="📋 Get Task Details", tags=['Tasks']),
+    update=extend_schema(summary="📋 Update Task", tags=['Tasks']),
+    partial_update=extend_schema(summary="📋 Partially Update Task", tags=['Tasks']),
+    destroy=extend_schema(summary="📋 Delete Task (TeamLeader Only)", tags=['Tasks']),
 )
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.select_related('workspace', 'assigned_to', 'created_by').all()
 
     def get_serializer_class(self):
-        # Schema generatsiyasi uchun xavfsiz serializer
         if getattr(self, 'swagger_fake_view', False):
             return TaskDetailSerializer
             
@@ -47,8 +45,6 @@ class TaskViewSet(viewsets.ModelViewSet):
                 return TaskUpdateByTeamLeaderSerializer
             if task.assigned_to == user:
                 return TaskUpdateByAssigneeSerializer
-        
-        # Barcha qolgan holatlar uchun (masalan, `retrieve`) to'liq ma'lumot beruvchi serializer
         return TaskDetailSerializer
 
     def get_queryset(self):
@@ -58,38 +54,30 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Task.objects.none()
             
-        # Global admin barcha vazifalarni ko'radi
         if user.user_type == 'ADMIN':
             return self.queryset.all()
             
-        # Foydalanuvchi a'zo bo'lgan barcha ish maydonlaridagi vazifalarni qaytaramiz
         user_workspace_ids = user.workspace_memberships.filter(is_active=True).values_list('workspace_id', flat=True)
         return self.queryset.filter(workspace_id__in=user_workspace_ids)
 
     def get_permissions(self):
-        """Amalga qarab ruxsatnomalarni belgilash."""
         if self.action == 'create':
             self.permission_classes = [permissions.IsAuthenticated, IsTeamLeaderForAction]
         elif self.action in ['update', 'partial_update']:
-            # Yoki vazifani yaratgan Team Leader, yoki vazifa berilgan shaxs o'zgartira oladi
             self.permission_classes = [permissions.IsAuthenticated, (IsTeamLeaderForAction | IsAssigneeForStatusUpdate)]
         elif self.action == 'destroy':
-            # Faqat vazifani yaratgan Team Leader o'chira oladi
             self.permission_classes = [permissions.IsAuthenticated, IsTeamLeaderForAction]
-        else: # list, retrieve
-            # Ish maydoni a'zosi bo'lishi kifoya
+        else:
             self.permission_classes = [permissions.IsAuthenticated, IsWorkspaceMember]
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        """Yangi vazifa yaratilganda uning yaratuvchisini belgilash va bildirishnoma yuborish."""
         task = serializer.save(created_by=self.request.user)
-        # Bildirishnoma yaratish
         create_notification(
             recipient=task.assigned_to,
             actor=task.created_by,
-            verb="sizga yangi vazifa biriktirdi",
-            message=f"'{task.created_by.get_full_name()}' sizga '{task.title}' nomli yangi vazifa biriktirdi.",
+            verb="assigned you a new task",
+            message=f"'{task.created_by.get_full_name()}' assigned you a new task: '{task.title}'.",
             action_object=task
         )
 
@@ -97,12 +85,12 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    create=extend_schema(summary="💬 Vazifaga izoh qo'shish", tags=['Task Comments']),
-    list=extend_schema(summary="💬 Vazifa izohlari ro'yxati", tags=['Task Comments']),
-    retrieve=extend_schema(summary="💬 Izoh ma'lumotlarini olish", tags=['Task Comments']),
-    update=extend_schema(summary="💬 Izohni tahrirlash", tags=['Task Comments']),
-    partial_update=extend_schema(summary="💬 Izohni qisman tahrirlash", tags=['Task Comments']),
-    destroy=extend_schema(summary="💬 Izohni o'chirish", tags=['Task Comments']),
+    create=extend_schema(summary="💬 Add Comment to Task", tags=['Task Comments']),
+    list=extend_schema(summary="💬 List Task Comments", tags=['Task Comments']),
+    retrieve=extend_schema(summary="💬 Get Comment Details", tags=['Task Comments']),
+    update=extend_schema(summary="💬 Update Comment", tags=['Task Comments']),
+    partial_update=extend_schema(summary="💬 Partially Update Comment", tags=['Task Comments']),
+    destroy=extend_schema(summary="💬 Delete Comment", tags=['Task Comments']),
 )
 class TaskCommentViewSet(viewsets.ModelViewSet):
     queryset = TaskComment.objects.select_related('user').all()
@@ -118,14 +106,12 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(task_id=self.kwargs.get('task_pk'))
 
     def get_permissions(self):
-        # Schema generatsiyasi uchun
         if getattr(self, 'swagger_fake_view', False) or 'task_pk' not in self.kwargs:
             return [permission() for permission in self.permission_classes]
 
-        # Asosiy tekshiruv
         task = get_object_or_404(Task, pk=self.kwargs['task_pk'])
         if not IsWorkspaceMember().has_object_permission(self.request, self, task):
-            self.permission_denied(self.request, message="Siz bu vazifaga izoh yoza olmaysiz yoki izohlarni ko'ra olmaysiz.")
+            self.permission_denied(self.request, message="You must be a member of the workspace to comment on this task.")
 
         if self.action in ['update', 'partial_update', 'destroy']:
             self.permission_classes = [permissions.IsAuthenticated, IsCommentOwner]
@@ -138,21 +124,18 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
         commenter = self.request.user
         comment = serializer.save(user=commenter, task=task)
         
-        # ✅ BILDIRISHNOMA MANTIG'I
-        # Vazifa yaratuvchisiga bildirishnoma yuborish
         create_notification(
             recipient=task.created_by,
             actor=commenter,
-            verb="sizning vazifangizga izoh yozdi",
-            message=f"'{commenter.get_full_name()}' siz yaratgan '{task.title}' vazifasiga izoh qoldirdi.",
+            verb="commented on your task",
+            message=f"'{commenter.get_full_name()}' commented on your task: '{task.title}'.",
             action_object=comment
         )
-        
-        # Vazifa bajaruvchisiga bildirishnoma yuborish
+
         create_notification(
             recipient=task.assigned_to,
             actor=commenter,
-            verb="sizga biriktirilgan vazifaga izoh yozdi",
-            message=f"'{commenter.get_full_name()}' sizga biriktirilgan '{task.title}' vazifasiga izoh qoldirdi.",
+            verb="commented on your task",
+            message=f"'{commenter.get_full_name()}' commented on your task: '{task.title}'.",
             action_object=comment
         )

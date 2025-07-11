@@ -7,7 +7,6 @@ from .models import User, Student, Recruiter, Staff
 from apps.workspaces.models import WorkspaceMember
 from apps.notifications.utils import create_notification
 
-# --- Yordamchi Maydon ---
 class StringifiedJSONField(serializers.JSONField):
     def to_internal_value(self, data):
         if isinstance(data, str):
@@ -17,7 +16,6 @@ class StringifiedJSONField(serializers.JSONField):
                 self.fail('invalid', input=data)
         return super().to_internal_value(data)
 
-# --- AUTH SERIALIZER ---
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True, min_length=8)
@@ -26,12 +24,12 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate_old_password(self, value):
         user = self.context['request'].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Eski parol noto'g'ri")
+            raise serializers.ValidationError("Old password is incorrect")
         return value
 
     def validate(self, attrs):
         if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"new_password": "Yangi parollar mos kelmadi"})
+            raise serializers.ValidationError({"new_password": "New passwords do not match"})
         return attrs
 
 # --- USER SERIALIZERS ---
@@ -60,8 +58,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         elif user.user_type == 'RECRUITER': Recruiter.objects.create(user=user)
         elif user.user_type == 'STAFF': Staff.objects.create(user=user)
         create_notification(
-            recipient=user, actor=None, verb="tizimga muvaffaqiyatli ro'yxatdan o'tdingiz",
-            message=f"Xush kelibsiz, {user.first_name}! JDU Coworking platformasiga muvaffaqiyatli ro'yxatdan o'tdingiz."
+            recipient=user, actor=None, verb="You have successfully registered on JDU Coworking platform.",
+            message=f"Welcome, {user.first_name}! You have successfully registered on JDU Coworking platform."
         )
         return user
 

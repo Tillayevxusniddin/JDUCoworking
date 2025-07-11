@@ -5,9 +5,8 @@ from .models import Notification
 
 def create_notification(recipient, actor, verb, message, action_object=None, target=None):
     """
-    Yagona markazlashgan funksiya orqali bildirishnoma yaratish.
+    Create a new notification.
     """
-    # Agar recipient va actor bir xil bo'lsa (masalan, o'ziga izoh yozsa), bildirishnoma yaratilmaydi
     if recipient == actor:
         return
 

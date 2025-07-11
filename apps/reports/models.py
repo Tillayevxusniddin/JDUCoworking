@@ -7,24 +7,24 @@ from apps.users.models import User
 from apps.workspaces.models import Workspace
 
 def validate_student_user(user_id):
-    """Faqat 'STUDENT' turidagi foydalanuvchilarni qabul qiladi."""
+    """Only accepts users of type 'STUDENT'."""
     user = User.objects.get(pk=user_id)
     if user.user_type != 'STUDENT':
-        raise ValidationError("Faqat 'STUDENT' turidagi foydalanuvchilar tanlanishi mumkin.")
+        raise ValidationError("Only users of type 'STUDENT' are allowed.")
 
 def validate_staff_user(user_id):
-    """Faqat 'STAFF' yoki 'ADMIN' turidagi foydalanuvchilarni qabul qiladi."""
+    """Only accepts users of type 'STAFF' or 'ADMIN'."""
     user = User.objects.get(pk=user_id)
     if user.user_type not in ['STAFF', 'ADMIN']:
-        raise ValidationError("Faqat 'STAFF' yoki 'ADMIN' turidagi foydalanuvchilar tanlanishi mumkin.")
+        raise ValidationError("Only users of type 'STAFF' or 'ADMIN' are allowed.")
 
 class DailyReport(models.Model):
-    """Har bir talabaning kunlik hisoboti uchun model."""
+    """Model for each student's daily report."""
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_reports', validators=[validate_student_user])
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='daily_reports')
-    report_date = models.DateField(verbose_name="Hisobot sanasi")
-    hours_worked = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="Ishlangan soat")
-    work_description = models.TextField(verbose_name="Bajarilgan ish tavsifi")
+    report_date = models.DateField(verbose_name="Report date")
+    hours_worked = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="Hours worked")
+    work_description = models.TextField(verbose_name="Work description")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,30 +32,30 @@ class DailyReport(models.Model):
         db_table = 'daily_reports'
         ordering = ['-report_date']
         unique_together = ('student', 'report_date', 'workspace')
-        verbose_name = "Kunlik Hisobot"
-        verbose_name_plural = "Kunlik Hisobotlar"
+        verbose_name = "Daily Report"
+        verbose_name_plural = "Daily Reports"
 
     def __str__(self):
-        return f"{self.student.get_full_name()} hisoboti ({self.workspace.name}) - {self.report_date}"
+        return f"{self.student.get_full_name()} report ({self.workspace.name}) - {self.report_date}"
 
 class SalaryRecord(models.Model):
-    """Talabaning oylik maosh yozuvi."""
+    """Model for each student's monthly salary record."""
     STATUS_CHOICES = (
-        ('PENDING', 'Kutilmoqda'),
-        ('APPROVED', 'Tasdiqlangan'),
-        ('REJECTED', 'Rad etilgan'),
-        ('PAID', 'To\'langan'),
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('PAID', 'Paid'),
     )
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='salary_records', validators=[validate_student_user])
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='salary_records')
-    month = models.IntegerField(verbose_name="Oy")
-    year = models.IntegerField(verbose_name="Yil")
-    total_hours = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Jami soat")
-    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Soatbay stavka")
-    gross_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Umumiy summa (barcha summa)")
-    deduction_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'), verbose_name="Ushlanma foizi (%)")
-    deduction_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ushlanma miqdori")
-    net_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Sof miqdor (qo'lga tegadigan)")
+    month = models.IntegerField(verbose_name="Month")
+    year = models.IntegerField(verbose_name="Year")
+    total_hours = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Total hours")
+    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Hourly rate")
+    gross_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Gross amount (total)")
+    deduction_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'), verbose_name="Deduction percentage (%)")
+    deduction_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Deduction amount")
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Net amount (take-home)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_salaries', validators=[validate_staff_user])
     approved_at = models.DateTimeField(null=True, blank=True)
@@ -66,8 +66,8 @@ class SalaryRecord(models.Model):
         db_table = 'salary_records'
         ordering = ['-year', '-month']
         unique_together = ('student', 'workspace', 'year', 'month')
-        verbose_name = "Oylik Maosh Yozuvi"
-        verbose_name_plural = "Oylik Maosh Yozuvlari"
+        verbose_name = "Monthly Salary Record"
+        verbose_name_plural = "Monthly Salary Records"
 
     def save(self, *args, **kwargs):
         self.gross_amount = Decimal(self.total_hours) * Decimal(self.hourly_rate)
@@ -76,14 +76,14 @@ class SalaryRecord(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.student.get_full_name()} uchun maosh ({self.workspace.name}) - {self.year}/{self.month}"
-    
+        return f"{self.student.get_full_name()} for salary ({self.workspace.name}) - {self.year}/{self.month}"
+
 class MonthlyReport(models.Model):
-    """Talabaning oylik Excel hisoboti."""
+    """Model for each student's monthly Excel report."""
     STATUS_CHOICES = (
-        ('GENERATED', 'Yaratilgan'),
-        ('APPROVED', 'Tasdiqlangan'),
-        ('REJECTED', 'Rad etilgan'),
+        ('GENERATED', 'Generated'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
     )
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='monthly_reports', validators=[validate_student_user])
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='monthly_reports')
@@ -100,8 +100,8 @@ class MonthlyReport(models.Model):
         db_table = 'monthly_reports'
         ordering = ['-year', '-month']
         unique_together = ('student', 'workspace', 'year', 'month')
-        verbose_name = "Oylik Hisobot"
-        verbose_name_plural = "Oylik Hisobotlar"
+        verbose_name = "Monthly Report"
+        verbose_name_plural = "Monthly Reports"
 
     def __str__(self):
-        return f"{self.student.get_full_name()} uchun oylik hisobot ({self.workspace.name}) - {self.year}/{self.month}"
+        return f"{self.student.get_full_name()} for monthly report ({self.workspace.name}) - {self.year}/{self.month}"

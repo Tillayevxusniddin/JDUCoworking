@@ -36,10 +36,10 @@ class IsAdminOrWorkspaceMemberReadOnly(permissions.BasePermission):
 
 class IsWorkspaceMembersStaff(permissions.BasePermission):
     """
-    Foydalanuvchi ma'lum bir ish maydonining a'zosi ekanligini va
-    uning aynan shu ish maydonidagi roli 'STAFF' ekanligini tekshiradi.
+    This permission class checks if the user is a member of the workspace
+    with the 'STAFF' role. It allows access to views that require staff permissions.
     """
-    message = "Bu amalni faqat ish maydonidagi 'STAFF' rolidagi a'zolar bajara oladi."
+    message = "You must be a staff member of the workspace to perform this action."
 
     def has_object_permission(self, request, view, obj):
         user = request.user

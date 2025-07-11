@@ -3,48 +3,38 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Student
-# Circular import'ning oldini olish uchun WorkspaceMember'ni signal ichida import qilamiz
 from apps.workspaces.models import WorkspaceMember
-# ✅ YANGI IMPORT
 from apps.notifications.utils import create_notification
 
 @receiver(post_save, sender=Student)
 def sync_student_role_in_workspaces(sender, instance, **kwargs):
     """
-    Student'ning `level_status` maydoni o'zgarganda, uning barcha
-    Workspace'lardagi rolini sinxronlashtiradi va bildirishnoma yuboradi.
+    Syncs the student's role in all workspaces based on their level status.
+    If the student's level_status is 'TEAMLEAD', their role in all workspaces is set to 'TEAMLEADER'.
+    If the student's level_status is 'SIMPLE', their role in all workspaces is set to 'STUDENT'.
+    This function is triggered after a Student instance is saved.
     """
     user = instance.user
     
-    # Ma'lumotlar bazasiga murojaatni kamaytirish uchun eski holatni tekshirish
-    # Bu signal faqat 'level_status' maydoni haqiqatdan o'zgarganda ishlashi uchun
     if 'update_fields' in kwargs and kwargs['update_fields'] and 'level_status' not in kwargs['update_fields']:
         return
-
-    # Agar studentning level_status'i TEAMLEAD bo'lsa...
     if instance.level_status == 'TEAMLEAD':
-        # ...uning workspace'lardagi rolini 'TEAMLEADER'ga o'zgartiramiz.
         updated_count = WorkspaceMember.objects.filter(user=user).exclude(role='TEAMLEADER').update(role='TEAMLEADER')
-        # ✅ AGAR ROL HAQIQATDAN O'ZGARGAN BO'LSA, BILDIRISHNOMA YUBORAMIZ
         if updated_count > 0:
             create_notification(
                 recipient=user,
-                actor=None, # Bu o'zgarishni kim qilgani noaniq (admin yoki staff bo'lishi mumkin)
-                verb="sizning darajangiz oshirildi",
-                message="Tabriklaymiz! Sizning darajangiz 'Team Leader'ga ko'tarildi. Endi sizga yangi imkoniyatlar ochiladi.",
-                action_object=instance # Student profili
+                actor=None, 
+                verb="Your level has been upgraded",
+                message="Congratulations! Your level has been upgraded to 'Team Leader'. New opportunities await you.",
+                action_object=instance
             )
-            
-    # Agar studentning level_status'i SIMPLE bo'lsa...
     elif instance.level_status == 'SIMPLE':
-        # ...uning workspace'lardagi rolini 'STUDENT'ga qaytaramiz.
         updated_count = WorkspaceMember.objects.filter(user=user).exclude(role='STUDENT').update(role='STUDENT')
-        # ✅ AGAR ROL HAQIQATDAN O'ZGARGAN BO'LSA, BILDIRISHNOMA YUBORAMIZ
         if updated_count > 0:
             create_notification(
                 recipient=user,
                 actor=None,
-                verb="sizning darajangiz o'zgartirildi",
-                message="Sizning darajangiz 'Student'ga o'zgartirildi.",
+                verb="Your level has been downgraded",
+                message="Your level has been downgraded to 'Student'.",
                 action_object=instance
             )

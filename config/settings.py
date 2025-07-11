@@ -202,28 +202,28 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': """
     🎓 **Digital University Coworking System API Documentation**
     
-    Bu API universitet talabalarining kovorking faoliyatini boshqarish uchun mo'ljallangan.
+    This API is designed to manage coworking activities of university students.
     
-    ## Asosiy xususiyatlar:
-    - 👤 Foydalanuvchilar va rollar boshqaruvi (STUDENT, STAFF, TEAMLEADER, RECRUITER, ADMIN)
-    - 🏢 Kovorking maydonlari va a'zolik tizimi
-    - 📋 Vazifalar va loyihalar boshqaruvi
-    - 📊 Hisobotlar va maosh hisob-kitoblari
-    - 🤝 Uchrashuvlar va video konferensiyalar
-    - 💼 Ish e'lonlari va ariza berish tizimi
-    - 🔔 Bildirishnomalar va xabarlar
-    
-    ## Autentifikatsiya:
-    JWT token orqali autentifikatsiya qilinadi. 
-    1. `/api/v1/auth/login/` orqali login qiling
-    2. Olgan `access_token` ni `Authorization: Bearer <token>` formatida header ga qo'shing
-    3. Token muddati tugaganda `/api/v1/auth/token/refresh/` orqali yangilang
-    
+    ## Main features:
+    - 👤 User and role management (STUDENT (TEAMLEADER and SIMPLE), STAFF, RECRUITER, ADMIN)
+    - 🏢 Coworking spaces and membership system
+    - 📋 Task and project management
+    - 📊 Reporting and salary calculations
+    - 🤝 Meetings and video conferences
+    - 💼 Job postings and application system
+    - 🔔 Notifications and messaging
+
+    ## Authentication:
+    Authenticated via JWT token. 
+    1. Login via `/api/v1/auth/login/`
+    2. Add the obtained `access_token` to the header in the format `Authorization: Bearer <token>`
+    3. When the token expires, refresh it via `/api/v1/auth/token/refresh/`
+
     ## User Types:
-    - **STUDENT**: Talabalar - vazifalar, hisobotlar, ish izlash
-    - **STAFF**: Xodimlar - talabalar bilan ishlash
-    - **RECRUITER**: Ishga oluvchilar - ish e'lonlari
-    - **ADMIN**: Administratorlar - to'liq huquqlar
+    - **STUDENT [TEAMLEADER and SIMPLE]**: Talabalar - tasks, reporting, meetings
+    - **STAFF**: Staff - working with students
+    - **RECRUITER**: Recruiters - job postings
+    - **ADMIN**: Administrators - full access
     """,
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -292,17 +292,6 @@ SPECTACULAR_SETTINGS = {
         }
     },
 }
-
-
-# SWAGGER_SETTINGS = {
-#     'SECURITY_DEFINITIONS': {
-#         'Bearer': {
-#             'type': 'apiKey',
-#             'name': 'Authorization',
-#             'in': 'header'
-#         }
-#     }
-# }
 
 #JWT Settings
 SIMPLE_JWT = {

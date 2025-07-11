@@ -3,23 +3,21 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from django_apscheduler.jobstores import DjangoJobStore
 from .jobs import update_overdue_tasks
-from apps.reports.jobs import generate_monthly_reports_and_salaries # <-- YANGI IMPORT
+from apps.reports.jobs import generate_monthly_reports_and_salaries
 
 def start():
     """
-    Rejalashtiruvchini ishga tushiradi va vazifalarni qo'shadi.
-    Bu funksiya server ishga tushganda bir marta chaqiriladi.
+    Start the background scheduler to run periodic tasks.
+    This function initializes the scheduler and adds jobs to it.
     """
     scheduler = BackgroundScheduler()
-    # Vazifalar haqidagi ma'lumotni saqlash uchun Django'ning ma'lumotlar bazasidan foydalanamiz
     scheduler.add_jobstore(DjangoJobStore(), "default")
-    # `update_overdue_tasks` funksiyasini har kuni tunda (masalan, 00:01 da) ishga tushirish
     scheduler.add_job(
         update_overdue_tasks,
         trigger='cron',
         hour='0',
         minute='1',
-        id='update_overdue_tasks_job',  # Vazifa uchun unikal ID
+        id='update_overdue_tasks_job', 
         replace_existing=True,
     )
     

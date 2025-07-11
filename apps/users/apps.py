@@ -8,7 +8,7 @@ class UsersConfig(AppConfig):
 
     def ready(self):
         """
-        Ilova tayyor bo'lganda signallarni import qilish.
+        Import signals to ensure they are registered when the app is ready.
         """
         import apps.users.signals 
     
