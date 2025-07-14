@@ -1,0 +1,199 @@
+AWS Setup Guide: Serverless Welcome Emails
+This guide outlines the steps to configure AWS Lambda and SES to send welcome emails for the JDU Coworking project. This setup is designed to be secure, scalable, and operate entirely within the AWS Free Tier.
+
+Part 1: Configure AWS Simple Email Service (SES)
+Step 1: Verify Sender Email Identity
+First, you must prove ownership of the email address that will send emails.
+
+Navigate to the Simple Email Service (SES) in your AWS Console.
+
+Go to Verified identities and click Create identity.
+
+Select Email address, enter the email you want to send from (e.g., no-reply@yourdomain.com), and click Create identity.
+
+AWS will send a verification link to that email. Click it. The status in the SES console will change to Verified.
+
+Note on SES Sandbox: By default, your account is in the SES sandbox, which means you can only send emails to other verified email addresses. For a production application, you must request to move out of the sandbox.
+
+Part 2: Configure AWS Lambda Function
+Step 2: Create an IAM Role for Lambda
+The Lambda function needs permission to interact with other AWS services (SES and CloudWatch Logs).
+
+Navigate to IAM (Identity and Access Management) in the AWS Console.
+
+Go to Roles and click Create role.
+
+For "Trusted entity type", select AWS service.
+
+For "Use case", choose Lambda. Click Next.
+
+On the "Add permissions" page, search for and add the following two policies:
+
+AWSLambdaBasicExecutionRole (for logging)
+
+AmazonSESFullAccess (for sending emails)
+
+Click Next. Give the role a descriptive name (e.g., LambdaSESEmailRole) and click Create role.
+
+Step 3: Create the Lambda Function
+This function will contain the Python code to send the email.
+
+Navigate to Lambda in the AWS Console.
+
+Click Create function.
+
+Select Author from scratch.
+
+Function name: sendWelcomeEmail
+
+Runtime: Python 3.11 (or a recent version)
+
+Permissions: Expand "Change default execution role" and select Use an existing role. Choose the LambdaSESEmailRole you created in the previous step.
+
+Click Create function.
+
+Step 4: Add Code and Environment Variables
+In the function's "Code source" editor, paste the Python code for the email-sending logic. 
+
+
+// lambda_function.py
+
+```
+import json
+import boto3
+import os
+
+# Initialize the SES client
+ses_client = boto3.client('ses')
+
+# The email address you verified in SES
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL') 
+
+def lambda_handler(event, context):
+    """
+    This function receives user data via API Gateway, formats a welcome email,
+    and sends it using AWS SES.
+    """
+    print(f"Received event: {event}")
+    
+    try:
+        # API Gateway sends the POST request body as a JSON string
+        body = json.loads(event.get('body', '{}'))
+        
+        # Extract user details from the request body
+        recipient_email = body.get('email')
+        first_name = body.get('first_name', 'there') # Default to 'there' if no name is provided
+
+        # Basic validation
+        if not recipient_email or not SENDER_EMAIL:
+            print("Error: Recipient or sender email is missing.")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Missing required email fields.'})
+            }
+            
+        # --- Email Content ---
+        subject = "Welcome to the JDU Coworking Platform!"
+        
+        # Plain text version of the email
+        body_text = (f"Hi {first_name},\n\n"
+                     "Welcome! We are excited to have you on board.\n\n"
+                     "Best regards,\nThe JDU Coworking Team")
+        
+        # HTML version of the email
+        body_html = (f"""
+        <html>
+        <head></head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>Welcome, {first_name}!</h2>
+            <p>We are excited to have you on board the <strong>JDU Coworking Platform</strong>.</p>
+            <p>Here you can collaborate on projects, manage your tasks, and track your progress.</p>
+            <br>
+            <p>Best regards,<br>The JDU Coworking Team</p>
+        </body>
+        </html>
+        """)
+
+        # --- Send the Email using SES ---
+        response = ses_client.send_email(
+            Source=SENDER_EMAIL,
+            Destination={'ToAddresses': [recipient_email]},
+            Message={
+                'Subject': {'Charset': 'UTF-8', 'Data': subject},
+                'Body': {
+                    'Text': {'Charset': 'UTF-8', 'Data': body_text},
+                    'Html': {'Charset': 'UTF-8', 'Data': body_html}
+                }
+            }
+        )
+        
+        print(f"Email sent! Message ID: {response['MessageId']}")
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': 'Welcome email sent successfully!', 'messageId': response['MessageId']})
+        }
+
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON in request body.")
+        return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid JSON format.'})}
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+```
+
+
+Go to the Configuration tab > Environment variables.
+
+Add a new variable:
+
+Key: SENDER_EMAIL
+
+Value: <your-verified-email@example.com>
+
+Click Deploy to save your changes.
+
+Part 3: Configure API Gateway
+Step 5: Create an HTTP API Trigger
+To make the Lambda function callable from the internet, we expose it via an API Gateway endpoint.
+
+On your Lambda function's page, click Add trigger.
+
+Select API Gateway as the source.
+
+Choose Create a new API.
+
+Select HTTP API for the API type.
+
+For Security, select Open. We will secure it with an API key next.
+
+Click Add.
+
+An API endpoint URL will be generated. Copy this URL.
+
+Step 6: Secure the API with an API Key
+In the API Gateway console, navigate to API Keys.
+
+Click Create API key, give it a name (e.g., django-app-key), and save it. Copy the generated key immediately.
+
+Navigate to Usage Plans. Click Create usage plan.
+
+Give the plan a name (e.g., DjangoAppUsagePlan), then click Next.
+
+Associate your API with the plan: click Add API Stage, select your new API and the $default stage. Click Next.
+
+Associate the API key: click Add API key to usage plan, select the key you created, and click Done.
+
+Go back to your API's configuration -> Routes. Click on the POST method.
+
+Under the Authorize tab for the route, set API Key Required to true and save.
+
+Finally, deploy your API by going to the "Stages" section and clicking "Deploy" for the $default stage if prompted.
+
+Your serverless email system is now configured and secured.
+
+
+
