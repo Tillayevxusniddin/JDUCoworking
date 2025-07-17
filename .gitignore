@@ -2,4 +2,5 @@
 .env
 media
 static
-google_service_account.json
+google_service_account.jsonstaticfiles/
+staticfiles/
