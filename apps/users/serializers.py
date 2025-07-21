@@ -2,6 +2,8 @@
 
 import json
 from rest_framework import serializers
+import requests
+from django.conf import settings
 from django.contrib.auth import authenticate
 from .models import User, Student, Recruiter, Staff
 from apps.workspaces.models import WorkspaceMember
@@ -61,7 +63,34 @@ class UserCreateSerializer(serializers.ModelSerializer):
             recipient=user, actor=None, verb="You have successfully registered on JDU Coworking platform.",
             message=f"Welcome, {user.first_name}! You have successfully registered on JDU Coworking platform."
         )
+    
+        print(f"New user created: {user.email}. Triggering welcome email.")
+        lambda_url = settings.LAMBDA_WELCOME_EMAIL_URL
+        api_key = settings.LAMBDA_API_KEY
+
+        if not lambda_url or not api_key:
+            print("Warning: Lambda URL or API Key is not configured. Skipping email.")
+        else:
+            payload = {
+                "email": user.email,
+                "first_name": user.first_name,
+                "password": password  
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key
+            }
+            try:
+                response = requests.post(lambda_url, json=payload, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    print(f"Successfully triggered welcome email for {user.email}.")
+                else:
+                    print(f"Error triggering Lambda for {user.email}. Status: {response.status_code}, Response: {response.text}")
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to connect to Lambda endpoint: {e}")
         return user
+
+       
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:

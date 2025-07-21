@@ -1,5 +1,6 @@
 .venv
 .env
+.env.save
 media
 static
 google_service_account.jsonstaticfiles/
