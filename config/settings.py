@@ -275,8 +275,8 @@ SPECTACULAR_SETTINGS = {
     },
     'SERVERS': [
         {
-            'url': 'http://localhost:8000',
-            'description': 'Local server'
+            'url': 'https://devkage.uz',
+            'description': 'Production server'
         },
     ],
     # JWT authentication uchun security scheme

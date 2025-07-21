@@ -13,42 +13,6 @@ from apps.workspaces.models import WorkspaceMember
 from apps.notifications.utils import create_notification
 
 # ====================================================================
-# SIGNAL 1: Send a welcome email when a new User is created.
-# ====================================================================
-@receiver(post_save, sender=User)
-def send_welcome_email_on_user_create(sender, instance, created, **kwargs):
-    """
-    Sends a welcome email via AWS Lambda when a new user is created.
-    """
-    if created:
-        print(f"New user created: {instance.email}. Triggering welcome email.")
-
-        lambda_url = settings.LAMBDA_WELCOME_EMAIL_URL
-        api_key = settings.LAMBDA_API_KEY
-
-        if not lambda_url or not api_key:
-            print("Warning: Lambda URL or API Key is not configured. Skipping email.")
-            return
-
-        payload = {
-            "email": instance.email,
-            "first_name": instance.first_name
-        }
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key
-        }
-
-        try:
-            response = requests.post(lambda_url, json=payload, headers=headers, timeout=5)
-            if response.status_code == 200:
-                print(f"Successfully triggered welcome email for {instance.email}. Lambda response: {response.json()}")
-            else:
-                print(f"Error triggering Lambda for {instance.email}. Status: {response.status_code}, Response: {response.text}")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to connect to Lambda endpoint: {e}")
-
-# ====================================================================
 # SIGNAL 2: Sync student's role in workspaces when their level changes.
 # ====================================================================
 @receiver(post_save, sender=Student)
